@@ -1,0 +1,21 @@
+{
+  "template": "flowchart",
+  "title": "Toy Research Workflow",
+  "canvas": { "width_in": 7.5, "height_in": 3.8 },
+  "style": "chinese-journal",
+  "nodes": [
+    { "id": "question", "text": "Define research question", "shape": "ellipse" },
+    { "id": "data", "text": "Collect public data" },
+    { "id": "model", "text": "Build simulation model" },
+    { "id": "verify", "text": "Verify assumptions" },
+    { "id": "report", "text": "Write figure-ready result", "shape": "ellipse" }
+  ],
+  "groups": [],
+  "connectors": [
+    { "from": "question", "to": "data" },
+    { "from": "data", "to": "model" },
+    { "from": "model", "to": "verify" },
+    { "from": "verify", "to": "report" }
+  ],
+  "exports": { "dir": "output", "stem": "toy_flowchart" }
+}

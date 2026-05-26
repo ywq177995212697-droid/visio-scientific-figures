@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visio Scientific Figures"
+  short_description: "Create editable Visio research figures."
+  default_prompt: "Create an editable Visio scientific figure from my research description, export PNG and EMF previews, and run the quality checker."

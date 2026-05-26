@@ -1,0 +1,31 @@
+{
+  "template": "framework",
+  "title": "Toy AI-Assisted Modeling Framework",
+  "canvas": { "width_in": 10.5, "height_in": 5.6 },
+  "style": "nature-muted",
+  "nodes": [
+    { "id": "text", "text": "Research text" },
+    { "id": "constraints", "text": "Domain constraints" },
+    { "id": "parse", "text": "Task parsing" },
+    { "id": "abstract", "text": "Concept abstraction" },
+    { "id": "generate", "text": "Model generation" },
+    { "id": "check", "text": "Human verification" },
+    { "id": "figure", "text": "Editable Visio figure" },
+    { "id": "paper", "text": "Paper-ready exports" }
+  ],
+  "groups": [
+    { "id": "input", "title": "Input Layer", "nodes": ["text", "constraints"] },
+    { "id": "process", "title": "Core Processing Layer", "nodes": ["parse", "abstract", "generate", "check"] },
+    { "id": "output", "title": "Output Layer", "nodes": ["figure", "paper"] }
+  ],
+  "connectors": [
+    { "from": "text", "to": "parse" },
+    { "from": "constraints", "to": "abstract", "dashed": true },
+    { "from": "parse", "to": "abstract" },
+    { "from": "abstract", "to": "generate" },
+    { "from": "generate", "to": "check" },
+    { "from": "check", "to": "figure" },
+    { "from": "figure", "to": "paper" }
+  ],
+  "exports": { "dir": "output", "stem": "toy_framework" }
+}

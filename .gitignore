@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+examples/**/output/
+*.vsdx~
+*_backup_*.vsdx
+~$*
+
+.DS_Store
+Thumbs.db

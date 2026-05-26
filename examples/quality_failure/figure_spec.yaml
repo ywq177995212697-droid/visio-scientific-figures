@@ -1,0 +1,38 @@
+{
+  "template": "flowchart",
+  "title": "Intentional Quality Failure Example",
+  "canvas": { "width_in": 5.0, "height_in": 3.0 },
+  "style": "ieee-clean",
+  "nodes": [
+    {
+      "id": "a",
+      "text": "This deliberately long label is too large for the small box and should trigger a text overflow warning",
+      "x": 1.0,
+      "y": 1.0,
+      "w": 0.55,
+      "h": 0.28
+    },
+    {
+      "id": "b",
+      "text": "Overlapping node",
+      "x": 1.10,
+      "y": 1.03,
+      "w": 0.70,
+      "h": 0.32
+    },
+    {
+      "id": "c",
+      "text": "Out of bounds",
+      "x": 4.80,
+      "y": 2.60,
+      "w": 0.90,
+      "h": 0.50
+    }
+  ],
+  "groups": [],
+  "connectors": [
+    { "from": "a", "to": "b" },
+    { "from": "b", "to": "c" }
+  ],
+  "exports": { "dir": "output", "stem": "quality_failure" }
+}

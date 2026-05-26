@@ -1,0 +1,335 @@
+from __future__ import annotations
+
+import argparse
+import json
+import math
+from pathlib import Path
+from typing import Any
+
+import win32com.client
+
+
+STYLE_PACKS = {
+    "nature-muted": {
+        "ink": "#1F2933",
+        "muted": "#5B6675",
+        "line": "#26384F",
+        "fills": ["#C9D8F0", "#B9DFC9", "#F0D58A", "#91C9D7", "#C1A4D6"],
+        "strokes": ["#5278B8", "#3F8D70", "#B88522", "#2F7F9B", "#7A4F9B"],
+        "bg": "#FFFFFF",
+    },
+    "ieee-clean": {
+        "ink": "#111111",
+        "muted": "#555555",
+        "line": "#222222",
+        "fills": ["#F7F7F7", "#EAEAEA", "#FFFFFF", "#D9D9D9"],
+        "strokes": ["#222222", "#444444", "#666666", "#888888"],
+        "bg": "#FFFFFF",
+    },
+    "chinese-journal": {
+        "ink": "#1F2937",
+        "muted": "#4B5563",
+        "line": "#1F4E79",
+        "fills": ["#EAF3FA", "#E8F3F0", "#FFF2D9", "#F6F7F9"],
+        "strokes": ["#1F5F99", "#0F6B5F", "#A86A16", "#B9C4D0"],
+        "bg": "#FFFFFF",
+    },
+    "presentation-color": {
+        "ink": "#172033",
+        "muted": "#526070",
+        "line": "#243B73",
+        "fills": ["#DDEBFF", "#DFF4EA", "#FFF1CC", "#F5E1FF", "#FFE4DA"],
+        "strokes": ["#2457A6", "#20835A", "#B47700", "#8A4BA8", "#C85432"],
+        "bg": "#FFFFFF",
+    },
+}
+
+
+def rgb(hex_color: str) -> str:
+    value = hex_color.strip("#")
+    return f"RGB({int(value[0:2], 16)},{int(value[2:4], 16)},{int(value[4:6], 16)})"
+
+
+def load_spec(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    try:
+        import yaml  # type: ignore
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "YAML requires PyYAML unless the file is JSON-compatible. "
+            "Install with `python -m pip install pyyaml` or use JSON syntax."
+        ) from exc
+    return yaml.safe_load(text)
+
+
+def style_for(spec: dict[str, Any]) -> dict[str, Any]:
+    name = spec.get("style", "nature-muted")
+    if isinstance(name, dict):
+        base = STYLE_PACKS.get(name.get("base", "nature-muted"), STYLE_PACKS["nature-muted"]).copy()
+        base.update(name)
+        return base
+    return STYLE_PACKS.get(str(name), STYLE_PACKS["nature-muted"])
+
+
+def output_paths(spec: dict[str, Any], spec_dir: Path) -> dict[str, Path]:
+    exports = spec.get("exports") or {}
+    stem = str(exports.get("stem") or "output")
+    out_dir = spec_dir / str(exports.get("dir") or "output")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return {
+        "vsdx": (spec_dir / exports["vsdx"]) if "vsdx" in exports else out_dir / f"{stem}.vsdx",
+        "png": (spec_dir / exports["png"]) if "png" in exports else out_dir / f"{stem}.png",
+        "emf": (spec_dir / exports["emf"]) if "emf" in exports else out_dir / f"{stem}.emf",
+    }
+
+
+class VisioCanvas:
+    def __init__(self, app: Any, width: float, height: float, style: dict[str, Any]):
+        self.app = app
+        self.width = width
+        self.height = height
+        self.style = style
+        self.doc = app.Documents.Add("")
+        self.page = app.ActivePage
+        self.page.PageSheet.CellsU("PageWidth").FormulaU = f"{width} in"
+        self.page.PageSheet.CellsU("PageHeight").FormulaU = f"{height} in"
+        self.font_id = self._find_font()
+        self.shapes: dict[str, Any] = {}
+
+    def _find_font(self) -> int | None:
+        preferred = ("Microsoft YaHei", "SimHei", "SimSun", "Arial Unicode MS", "Arial")
+        for name in preferred:
+            for idx in range(1, self.doc.Fonts.Count + 1):
+                font = self.doc.Fonts.Item(idx)
+                if name.lower() in font.Name.lower():
+                    return font.ID
+        return None
+
+    def y(self, y_top: float) -> float:
+        return self.height - y_top
+
+    def apply_style(self, shape: Any, fill: str, line: str, font: str | None = None,
+                    line_w: float = 1.1, font_size: float = 9.0, bold: bool = False) -> None:
+        shape.CellsU("FillForegnd").FormulaU = rgb(fill)
+        shape.CellsU("LineColor").FormulaU = rgb(line)
+        shape.CellsU("LineWeight").FormulaU = f"{line_w} pt"
+        shape.CellsU("Char.Size").FormulaU = f"{font_size} pt"
+        shape.CellsU("Char.Color").FormulaU = rgb(font or self.style["ink"])
+        shape.CellsU("Char.Style").FormulaU = "1" if bold else "0"
+        shape.CellsU("Para.HorzAlign").FormulaU = "1"
+        shape.CellsU("VerticalAlign").FormulaU = "1"
+        if self.font_id is not None:
+            shape.CellsU("Char.Font").FormulaU = str(self.font_id)
+        for margin in ("LeftMargin", "RightMargin", "TopMargin", "BottomMargin"):
+            shape.CellsU(margin).FormulaU = "0.03 in"
+
+    def rect(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
+             fill: str, line: str, font: str | None = None, radius: float = 0.06,
+             font_size: float = 9.0, bold: bool = False) -> Any:
+        shape = self.page.DrawRectangle(x, self.y(y + h), x + w, self.y(y))
+        shape.Text = text
+        shape.NameU = node_id
+        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold)
+        shape.CellsU("Rounding").FormulaU = f"{radius} in"
+        self.shapes[node_id] = shape
+        return shape
+
+    def ellipse(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
+                fill: str, line: str, font: str | None = None, font_size: float = 9.0,
+                bold: bool = False) -> Any:
+        shape = self.page.DrawOval(x, self.y(y + h), x + w, self.y(y))
+        shape.Text = text
+        shape.NameU = node_id
+        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold)
+        self.shapes[node_id] = shape
+        return shape
+
+    def text(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
+             font_size: float = 11.0, bold: bool = False, align: int = 1) -> Any:
+        shape = self.rect(node_id, x, y, w, h, text, "#FFFFFF", "#FFFFFF",
+                          font_size=font_size, bold=bold, radius=0)
+        shape.CellsU("FillPattern").FormulaU = "0"
+        shape.CellsU("LinePattern").FormulaU = "0"
+        shape.CellsU("Para.HorzAlign").FormulaU = str(align)
+        return shape
+
+    def line(self, x1: float, y1: float, x2: float, y2: float, dashed: bool = False,
+             arrow: bool = True, color: str | None = None, label: str = "") -> None:
+        line = self.page.DrawLine(x1, self.y(y1), x2, self.y(y2))
+        line.CellsU("LineColor").FormulaU = rgb(color or self.style["line"])
+        line.CellsU("LineWeight").FormulaU = "1.15 pt"
+        if arrow:
+            line.CellsU("EndArrow").FormulaU = "4"
+        if dashed:
+            line.CellsU("LinePattern").FormulaU = "2"
+        if label:
+            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+            self.text(f"label_{line.ID}", mid_x - 0.35, mid_y - 0.12, 0.7, 0.18,
+                      label, font_size=7.2)
+
+    def connect(self, start_id: str, end_id: str, dashed: bool = False, label: str = "") -> None:
+        start, end = self.shapes[start_id], self.shapes[end_id]
+        sx, sy, sw, sh = self.bounds(start)
+        ex, ey, ew, eh = self.bounds(end)
+        self.line(sx + sw, sy + sh / 2, ex, ey + eh / 2, dashed=dashed, label=label)
+
+    def bounds(self, shape: Any) -> tuple[float, float, float, float]:
+        pin_x = shape.CellsU("PinX").ResultIU
+        pin_y = shape.CellsU("PinY").ResultIU
+        width = shape.CellsU("Width").ResultIU
+        height = shape.CellsU("Height").ResultIU
+        return pin_x - width / 2, self.height - (pin_y + height / 2), width, height
+
+    def export(self, paths: dict[str, Path]) -> None:
+        self.page.Export(str(paths["png"].resolve()))
+        self.page.Export(str(paths["emf"].resolve()))
+        self.doc.SaveAs(str(paths["vsdx"].resolve()))
+        self.doc.Close()
+
+
+def node_box(node: dict[str, Any], fallback: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    return (
+        float(node.get("x", fallback[0])),
+        float(node.get("y", fallback[1])),
+        float(node.get("w", node.get("width", fallback[2]))),
+        float(node.get("h", node.get("height", fallback[3]))),
+    )
+
+
+def draw_title(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    title = str(spec.get("title") or "")
+    if title:
+        c.text("title", 0.35, 0.12, c.width - 0.7, 0.34, title, font_size=14, bold=True)
+
+
+def draw_flowchart(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    nodes = spec.get("nodes", [])
+    n = max(1, len(nodes))
+    cols = min(5, n)
+    rows = math.ceil(n / cols)
+    cell_w = (c.width - 1.0) / cols
+    cell_h = (c.height - 1.2) / max(1, rows)
+    for idx, node in enumerate(nodes):
+        row, col = divmod(idx, cols)
+        fill = node.get("fill") or c.style["fills"][idx % len(c.style["fills"])]
+        line = node.get("line") or c.style["strokes"][idx % len(c.style["strokes"])]
+        box = node_box(node, (0.55 + col * cell_w, 0.8 + row * cell_h, cell_w - 0.35, 0.58))
+        shape = c.ellipse if node.get("shape") == "ellipse" else c.rect
+        shape(node["id"], *box, node.get("text", node["id"]), fill, line,
+              font_size=float(node.get("font_size", 9.2)), bold=bool(node.get("bold", True)))
+    connect_all(c, spec)
+
+
+def draw_framework(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    groups = spec.get("groups") or [{"id": "main", "title": "", "nodes": [n["id"] for n in spec.get("nodes", [])]}]
+    node_map = {n["id"]: n for n in spec.get("nodes", [])}
+    band_h = (c.height - 1.0) / max(1, len(groups))
+    for gi, group in enumerate(groups):
+        y = 0.70 + gi * band_h
+        fill = c.style["fills"][gi % len(c.style["fills"])]
+        line = c.style["strokes"][gi % len(c.style["strokes"])]
+        c.rect(f"group_{group['id']}", 0.35, y, c.width - 0.7, band_h - 0.22,
+               group.get("title", ""), fill, line, font_size=10.5, bold=True)
+        ids = group.get("nodes", [])
+        step = (c.width - 1.15) / max(1, len(ids))
+        for ni, node_id in enumerate(ids):
+            node = node_map[node_id]
+            box = node_box(node, (0.65 + ni * step, y + 0.45, step - 0.22, 0.46))
+            c.rect(node_id, *box, node.get("text", node_id), "#FFFFFF", line, font_size=8.2, bold=True)
+    connect_all(c, spec)
+
+
+def draw_layered_system(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    nodes = spec.get("nodes", [])
+    count = max(1, len(nodes))
+    max_w, max_h = c.width - 1.0, c.height - 1.2
+    for idx, node in enumerate(nodes):
+        shrink = idx * 0.42
+        box = node_box(node, (0.5 + shrink, 0.75 + shrink, max_w - 2 * shrink, max_h - 2 * shrink))
+        fill = node.get("fill") or c.style["fills"][idx % len(c.style["fills"])]
+        line = node.get("line") or c.style["strokes"][idx % len(c.style["strokes"])]
+        font = node.get("font") or c.style["ink"]
+        c.rect(node["id"], *box, node.get("text", node["id"]), fill, line, font=font,
+               font_size=float(node.get("font_size", 10.0)), bold=True)
+
+
+def draw_matrix(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    matrix = spec.get("matrix", {})
+    rows, cols = matrix.get("rows", []), matrix.get("columns", [])
+    cells = matrix.get("cells", {})
+    left, top = 0.8, 0.85
+    w, h = (c.width - 1.2) / (len(cols) + 1), (c.height - 1.3) / (len(rows) + 1)
+    for ci, col in enumerate([""] + cols):
+        c.rect(f"col_{ci}", left + ci * w, top, w, h, str(col), c.style["fills"][0], c.style["strokes"][0], bold=True)
+    for ri, row in enumerate(rows, start=1):
+        c.rect(f"row_{ri}", left, top + ri * h, w, h, str(row), c.style["fills"][1], c.style["strokes"][1], bold=True)
+        for ci, col in enumerate(cols, start=1):
+            value = cells.get(f"{row}|{col}", "")
+            c.rect(f"cell_{ri}_{ci}", left + ci * w, top + ri * h, w, h, str(value), "#FFFFFF", "#B9C4D0")
+
+
+def draw_mechanism(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    nodes = spec.get("nodes", [])
+    cx, cy = c.width / 2, c.height / 2 + 0.15
+    rx, ry = c.width * 0.34, c.height * 0.28
+    for idx, node in enumerate(nodes):
+        angle = 2 * math.pi * idx / max(1, len(nodes)) - math.pi / 2
+        box = node_box(node, (cx + rx * math.cos(angle) - 0.65, cy + ry * math.sin(angle) - 0.25, 1.3, 0.5))
+        fill = c.style["fills"][idx % len(c.style["fills"])]
+        line = c.style["strokes"][idx % len(c.style["strokes"])]
+        c.rect(node["id"], *box, node.get("text", node["id"]), fill, line, font_size=8.5, bold=True)
+    connect_all(c, spec)
+
+
+def connect_all(c: VisioCanvas, spec: dict[str, Any]) -> None:
+    for edge in spec.get("connectors", []):
+        if edge.get("from") in c.shapes and edge.get("to") in c.shapes:
+            c.connect(edge["from"], edge["to"], dashed=bool(edge.get("dashed")), label=edge.get("label", ""))
+
+
+TEMPLATES = {
+    "flowchart": draw_flowchart,
+    "framework": draw_framework,
+    "layered-system": draw_layered_system,
+    "matrix": draw_matrix,
+    "mechanism": draw_mechanism,
+}
+
+
+def render(spec_path: Path) -> dict[str, Path]:
+    spec = load_spec(spec_path)
+    style = style_for(spec)
+    canvas = spec.get("canvas", {})
+    width = float(canvas.get("width_in", 7.5))
+    height = float(canvas.get("height_in", 5.0))
+    paths = output_paths(spec, spec_path.parent)
+    app = win32com.client.Dispatch("Visio.Application")
+    app.Visible = False
+    app.AlertResponse = 7
+    try:
+        c = VisioCanvas(app, width, height, style)
+        draw_title(c, spec)
+        template = spec.get("template", "flowchart")
+        if template not in TEMPLATES:
+            raise SystemExit(f"Unsupported template: {template}")
+        TEMPLATES[template](c, spec)
+        c.export(paths)
+    finally:
+        app.Quit()
+    return paths
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Render a figure_spec.yaml/json to editable Visio outputs.")
+    parser.add_argument("spec", type=Path)
+    args = parser.parse_args()
+    for kind, path in render(args.spec.resolve()).items():
+        print(f"{kind}={path}")
+
+
+if __name__ == "__main__":
+    main()

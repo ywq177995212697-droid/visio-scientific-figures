@@ -1,0 +1,16 @@
+{
+  "template": "layered-system",
+  "title": "Toy Layered Knowledge Base",
+  "canvas": { "width_in": 7.2, "height_in": 5.6 },
+  "style": "nature-muted",
+  "nodes": [
+    { "id": "public", "text": "1. Public baseline knowledge" },
+    { "id": "literature", "text": "2. Curated literature evidence" },
+    { "id": "domain", "text": "3. Domain rules and constraints" },
+    { "id": "project", "text": "4. Project-specific facts" },
+    { "id": "synthesis", "text": "5. Synthesized analysis layer" }
+  ],
+  "groups": [],
+  "connectors": [],
+  "exports": { "dir": "output", "stem": "toy_layered_system" }
+}
