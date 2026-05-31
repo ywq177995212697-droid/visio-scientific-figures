@@ -13,6 +13,7 @@ Editable Microsoft Visio scientific figures for papers, theses, reports, and pre
 - Template-driven generation for common research diagrams.
 - Editable Visio source files, not flat screenshots.
 - AI image asset workflow for icons and pictorial panels that Visio primitives cannot reproduce well.
+- Anonymized real-paper showcase: blurred source reference plus editable Visio reconstruction.
 - Built-in spec validation, environment checks, and quality reports.
 - Open-source-safe examples with no private manuscript material.
 - Works as a Codex skill and can also be copied into Claude Code skills.
@@ -27,9 +28,9 @@ Editable Microsoft Visio scientific figures for papers, theses, reports, and pre
 | --- | --- |
 | ![Toy layered system](docs/gallery/toy_layered_system.png) | ![Toy image assets](docs/gallery/toy_image_assets.png) |
 
-| Research framework with assets |
+| Anonymized real-paper reconstruction |
 | --- |
-| ![Research framework with assets](docs/gallery/research_framework_with_assets.png) |
+| ![Anonymized real-paper reconstruction](docs/gallery/research_framework_with_assets.png) |
 
 Render examples locally, then refresh the gallery:
 

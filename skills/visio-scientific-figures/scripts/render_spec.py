@@ -20,6 +20,7 @@ STYLE_PACKS = {
         "fills": ["#C9D8F0", "#B9DFC9", "#F0D58A", "#91C9D7", "#C1A4D6"],
         "strokes": ["#5278B8", "#3F8D70", "#B88522", "#2F7F9B", "#7A4F9B"],
         "bg": "#FFFFFF",
+        "font_candidates": ["Times New Roman", "Arial", "Microsoft YaHei", "SimSun"],
     },
     "ieee-clean": {
         "ink": "#111111",
@@ -28,6 +29,7 @@ STYLE_PACKS = {
         "fills": ["#F7F7F7", "#EAEAEA", "#FFFFFF", "#D9D9D9"],
         "strokes": ["#222222", "#444444", "#666666", "#888888"],
         "bg": "#FFFFFF",
+        "font_candidates": ["Times New Roman", "Arial", "Calibri"],
     },
     "chinese-journal": {
         "ink": "#1F2937",
@@ -36,6 +38,7 @@ STYLE_PACKS = {
         "fills": ["#EAF3FA", "#E8F3F0", "#FFF2D9", "#F6F7F9"],
         "strokes": ["#1F5F99", "#0F6B5F", "#A86A16", "#B9C4D0"],
         "bg": "#FFFFFF",
+        "font_candidates": ["SimSun", "Microsoft YaHei", "Times New Roman", "Arial"],
     },
     "presentation-color": {
         "ink": "#172033",
@@ -44,6 +47,7 @@ STYLE_PACKS = {
         "fills": ["#DDEBFF", "#DFF4EA", "#FFF1CC", "#F5E1FF", "#FFE4DA"],
         "strokes": ["#2457A6", "#20835A", "#B47700", "#8A4BA8", "#C85432"],
         "bg": "#FFFFFF",
+        "font_candidates": ["Arial", "Microsoft YaHei", "Calibri", "SimSun"],
     },
 }
 
@@ -101,11 +105,11 @@ class VisioCanvas:
         self.page = app.ActivePage
         self.page.PageSheet.CellsU("PageWidth").FormulaU = f"{width} in"
         self.page.PageSheet.CellsU("PageHeight").FormulaU = f"{height} in"
-        self.font_id = self._find_font()
+        self.font_id = self._find_font(self.style.get("font_candidates"))
         self.shapes: dict[str, Any] = {}
 
-    def _find_font(self) -> int | None:
-        preferred = ("Microsoft YaHei", "SimHei", "SimSun", "Arial Unicode MS", "Arial")
+    def _find_font(self, candidates: list[str] | None = None) -> int | None:
+        preferred = candidates or ["Times New Roman", "Arial", "Microsoft YaHei", "SimSun"]
         for name in preferred:
             for idx in range(1, self.doc.Fonts.Count + 1):
                 font = self.doc.Fonts.Item(idx)
@@ -113,11 +117,17 @@ class VisioCanvas:
                     return font.ID
         return None
 
+    def font_id_for(self, family: str | None) -> int | None:
+        if not family:
+            return self.font_id
+        return self._find_font([family]) or self.font_id
+
     def y(self, y_top: float) -> float:
         return self.height - y_top
 
     def apply_style(self, shape: Any, fill: str, line: str, font: str | None = None,
-                    line_w: float = 1.1, font_size: float = 9.0, bold: bool = False) -> None:
+                    line_w: float = 1.1, font_size: float = 9.0, bold: bool = False,
+                    font_family: str | None = None) -> None:
         shape.CellsU("FillForegnd").FormulaU = rgb(fill)
         shape.CellsU("LineColor").FormulaU = rgb(line)
         shape.CellsU("LineWeight").FormulaU = f"{line_w} pt"
@@ -126,36 +136,38 @@ class VisioCanvas:
         shape.CellsU("Char.Style").FormulaU = "1" if bold else "0"
         shape.CellsU("Para.HorzAlign").FormulaU = "1"
         shape.CellsU("VerticalAlign").FormulaU = "1"
-        if self.font_id is not None:
-            shape.CellsU("Char.Font").FormulaU = str(self.font_id)
+        font_id = self.font_id_for(font_family)
+        if font_id is not None:
+            shape.CellsU("Char.Font").FormulaU = str(font_id)
         for margin in ("LeftMargin", "RightMargin", "TopMargin", "BottomMargin"):
             shape.CellsU(margin).FormulaU = "0.03 in"
 
     def rect(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
              fill: str, line: str, font: str | None = None, radius: float = 0.06,
-             font_size: float = 9.0, bold: bool = False) -> Any:
+             font_size: float = 9.0, bold: bool = False, font_family: str | None = None) -> Any:
         shape = self.page.DrawRectangle(x, self.y(y + h), x + w, self.y(y))
         shape.Text = text
         shape.NameU = node_id
-        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold)
+        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold, font_family=font_family)
         shape.CellsU("Rounding").FormulaU = f"{radius} in"
         self.shapes[node_id] = shape
         return shape
 
     def ellipse(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
                 fill: str, line: str, font: str | None = None, font_size: float = 9.0,
-                bold: bool = False) -> Any:
+                bold: bool = False, font_family: str | None = None) -> Any:
         shape = self.page.DrawOval(x, self.y(y + h), x + w, self.y(y))
         shape.Text = text
         shape.NameU = node_id
-        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold)
+        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold, font_family=font_family)
         self.shapes[node_id] = shape
         return shape
 
     def text(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
-             font_size: float = 11.0, bold: bool = False, align: int = 1) -> Any:
+             font_size: float = 11.0, bold: bool = False, align: int = 1,
+             font_family: str | None = None) -> Any:
         shape = self.rect(node_id, x, y, w, h, text, "#FFFFFF", "#FFFFFF",
-                          font_size=font_size, bold=bold, radius=0)
+                          font_size=font_size, bold=bold, radius=0, font_family=font_family)
         shape.CellsU("FillPattern").FormulaU = "0"
         shape.CellsU("LinePattern").FormulaU = "0"
         shape.CellsU("Para.HorzAlign").FormulaU = str(align)
@@ -181,8 +193,11 @@ class VisioCanvas:
         return shape
 
     def line(self, x1: float, y1: float, x2: float, y2: float, dashed: bool = False,
-             arrow: bool = True, color: str | None = None, label: str = "") -> None:
+             arrow: bool = True, color: str | None = None, label: str = "",
+             name: str | None = None) -> Any:
         line = self.page.DrawLine(x1, self.y(y1), x2, self.y(y2))
+        if name:
+            line.NameU = name
         line.CellsU("LineColor").FormulaU = rgb(color or self.style["line"])
         line.CellsU("LineWeight").FormulaU = "1.15 pt"
         if arrow:
@@ -193,12 +208,37 @@ class VisioCanvas:
             mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
             self.text(f"label_{line.ID}", mid_x - 0.35, mid_y - 0.12, 0.7, 0.18,
                       label, font_size=7.2)
+        return line
 
-    def connect(self, start_id: str, end_id: str, dashed: bool = False, label: str = "") -> None:
+    def connect(self, start_id: str, end_id: str, dashed: bool = False, label: str = "",
+                route: str = "auto") -> None:
         start, end = self.shapes[start_id], self.shapes[end_id]
         sx, sy, sw, sh = self.bounds(start)
         ex, ey, ew, eh = self.bounds(end)
-        self.line(sx + sw, sy + sh / 2, ex, ey + eh / 2, dashed=dashed, label=label)
+        start_pt, end_pt = connection_points((sx, sy, sw, sh), (ex, ey, ew, eh))
+        if route == "elbow":
+            self.elbow(start_pt, end_pt, dashed=dashed, label=label)
+            return
+        self.line(*start_pt, *end_pt, dashed=dashed, label=label)
+
+    def elbow(self, start: tuple[float, float], end: tuple[float, float],
+              dashed: bool = False, label: str = "") -> None:
+        x1, y1 = start
+        x2, y2 = end
+        if abs(x2 - x1) >= abs(y2 - y1):
+            mid = (x1 + x2) / 2
+            points = [(x1, y1), (mid, y1), (mid, y2), (x2, y2)]
+        else:
+            mid = (y1 + y2) / 2
+            points = [(x1, y1), (x1, mid), (x2, mid), (x2, y2)]
+        for idx in range(len(points) - 1):
+            self.line(*points[idx], *points[idx + 1], dashed=dashed,
+                      arrow=idx == len(points) - 2, name=f"route_segment_{idx}")
+        if label:
+            label_x = (x1 + x2) / 2
+            label_y = (y1 + y2) / 2
+            self.text(f"label_{abs(hash((x1, y1, x2, y2, label))) % 100000}",
+                      label_x - 0.32, label_y - 0.10, 0.64, 0.18, label, font_size=7.0)
 
     def bounds(self, shape: Any) -> tuple[float, float, float, float]:
         pin_x = shape.CellsU("PinX").ResultIU
@@ -237,6 +277,22 @@ def node_box(node: dict[str, Any], fallback: tuple[float, float, float, float]) 
     )
 
 
+def connection_points(start: tuple[float, float, float, float],
+                      end: tuple[float, float, float, float]) -> tuple[tuple[float, float], tuple[float, float]]:
+    sx, sy, sw, sh = start
+    ex, ey, ew, eh = end
+    scx, scy = sx + sw / 2, sy + sh / 2
+    ecx, ecy = ex + ew / 2, ey + eh / 2
+    dx, dy = ecx - scx, ecy - scy
+    if abs(dx) >= abs(dy):
+        if dx >= 0:
+            return (sx + sw, scy), (ex, ecy)
+        return (sx, scy), (ex + ew, ecy)
+    if dy >= 0:
+        return (scx, sy + sh), (ecx, ey)
+    return (scx, sy), (ecx, ey + eh)
+
+
 def draw_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, float, float, float],
               fill: str, line: str, default_shape: str = "rect",
               default_font_size: float = 9.0, default_bold: bool = True) -> Any:
@@ -246,12 +302,13 @@ def draw_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, float, flo
     shape_kind = node.get("shape", default_shape)
     font_size = float(node.get("font_size", default_font_size))
     bold = bool(node.get("bold", default_bold))
+    font_family = node.get("font_family")
     if image_path and shape_kind == "image":
         return c.image(node_id, *box, image_path, register=True)
     shape_func = c.ellipse if shape_kind == "ellipse" else c.rect
     container_text = "" if image_path else text
     shape = shape_func(node_id, *box, container_text, fill, line,
-                       font_size=font_size, bold=bold)
+                       font_size=font_size, bold=bold, font_family=font_family)
     if image_path:
         place_image_in_node(c, node, box, image_path, text, font_size, bold)
     return shape
@@ -262,13 +319,14 @@ def place_image_in_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, 
     x, y, w, h = box
     pad = float(node.get("image_pad", 0.08))
     mode = node.get("image_mode", "left")
+    font_family = node.get("font_family")
     if mode == "top":
         img_h = min(h * 0.46, h - 2 * pad)
         img_w = min(w - 2 * pad, img_h * 1.35)
         c.image(f"{node['id']}_image", x + (w - img_w) / 2, y + pad, img_w, img_h, image_path)
         c.text(f"{node['id']}_label", x + pad, y + pad + img_h + 0.04,
                w - 2 * pad, max(0.12, h - img_h - 3 * pad), text,
-               font_size=font_size, bold=bold)
+               font_size=font_size, bold=bold, font_family=font_family)
         return
     if mode == "fill":
         c.image(f"{node['id']}_image", x + pad, y + pad, w - 2 * pad, h - 2 * pad, image_path)
@@ -277,13 +335,13 @@ def place_image_in_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, 
     c.image(f"{node['id']}_image", x + pad, y + (h - img_size) / 2, img_size, img_size, image_path)
     c.text(f"{node['id']}_label", x + pad * 2 + img_size, y + pad,
            max(0.12, w - img_size - 3 * pad), h - 2 * pad, text,
-           font_size=font_size, bold=bold)
+           font_size=font_size, bold=bold, font_family=font_family)
 
 
 def draw_title(c: VisioCanvas, spec: dict[str, Any]) -> None:
     title = str(spec.get("title") or "")
     if title:
-        c.text("title", 0.35, 0.12, c.width - 0.7, 0.34, title, font_size=14, bold=True)
+        c.text("title", 0.35, 0.12, c.width - 0.7, 0.34, title, font_size=12.5, bold=True)
 
 
 def draw_flowchart(c: VisioCanvas, spec: dict[str, Any]) -> None:
@@ -307,17 +365,24 @@ def draw_framework(c: VisioCanvas, spec: dict[str, Any]) -> None:
     node_map = {n["id"]: n for n in spec.get("nodes", [])}
     band_h = (c.height - 1.0) / max(1, len(groups))
     for gi, group in enumerate(groups):
-        y = 0.70 + gi * band_h
+        x = float(group.get("x", 0.35))
+        y = float(group.get("y", 0.70 + gi * band_h))
+        w = float(group.get("w", c.width - 0.7))
+        h = float(group.get("h", band_h - 0.22))
         fill = c.style["fills"][gi % len(c.style["fills"])]
         line = c.style["strokes"][gi % len(c.style["strokes"])]
-        c.rect(f"group_{group['id']}", 0.35, y, c.width - 0.7, band_h - 0.22,
-               group.get("title", ""), fill, line, font_size=10.5, bold=True)
+        c.rect(f"group_{group['id']}", x, y, w, h, "", fill, line, font_size=10.5, bold=True)
+        title_x = float(group.get("title_x", x + 0.20))
+        title_y = float(group.get("title_y", y + 0.12))
+        title_w = float(group.get("title_w", w - 0.4))
+        c.text(f"group_{group['id']}_title", title_x, title_y, title_w, 0.22,
+               group.get("title", ""), font_size=8.7, bold=True, align=0)
         ids = group.get("nodes", [])
-        step = (c.width - 1.15) / max(1, len(ids))
+        step = (w - 0.45) / max(1, len(ids))
         for ni, node_id in enumerate(ids):
             node = node_map[node_id]
-            box = node_box(node, (0.65 + ni * step, y + 0.45, step - 0.22, 0.46))
-            draw_node(c, node, box, "#FFFFFF", line, default_font_size=8.2)
+            box = node_box(node, (x + 0.30 + ni * step, y + 0.48, step - 0.22, 0.46))
+            draw_node(c, node, box, "#FFFFFF", line, default_font_size=8.0, default_bold=False)
     connect_all(c, spec)
 
 
@@ -369,7 +434,8 @@ def draw_mechanism(c: VisioCanvas, spec: dict[str, Any]) -> None:
 def connect_all(c: VisioCanvas, spec: dict[str, Any]) -> None:
     for edge in spec.get("connectors", []):
         if edge.get("from") in c.shapes and edge.get("to") in c.shapes:
-            c.connect(edge["from"], edge["to"], dashed=bool(edge.get("dashed")), label=edge.get("label", ""))
+            c.connect(edge["from"], edge["to"], dashed=bool(edge.get("dashed")),
+                      label=edge.get("label", ""), route=edge.get("route", "auto"))
 
 
 TEMPLATES = {

@@ -36,15 +36,15 @@ Minimum fields:
 - `title`: top title rendered as Visio text.
 - `canvas.width_in`, `canvas.height_in`: page size in inches.
 - `style`: one of `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`, or an object with a `base` and overrides.
-- `nodes`: stable diagram elements. Each node requires `id`; use `text`, `x`, `y`, `w`, `h`, `shape`, `fill`, `line`, `font_size`, `bold`, `image`, `image_mode`, and `image_pad` when needed.
-- `groups`: framework bands with `id`, `title`, and `nodes`.
-- `connectors`: arrows with `from`, `to`, optional `label`, and optional `dashed`.
+- `nodes`: stable diagram elements. Each node requires `id`; use `text`, `x`, `y`, `w`, `h`, `shape`, `fill`, `line`, `font_size`, `font_family`, `bold`, `image`, `image_mode`, and `image_pad` when needed.
+- `groups`: framework bands with `id`, `title`, and `nodes`; optional `x`, `y`, `w`, `h`, `title_x`, `title_y`, and `title_w` allow showcase-quality non-uniform layouts.
+- `connectors`: arrows with `from`, `to`, optional `label`, optional `dashed`, and optional `route: elbow`.
 - `exports`: either `{ "dir": "...", "stem": "..." }` or explicit `vsdx`, `png`, and `emf` paths.
 
 ## Template Notes
 
 - `flowchart` lays nodes left-to-right and wraps after five nodes unless explicit coordinates are provided.
-- `framework` lays groups as horizontal bands and distributes each group's nodes.
+- `framework` lays groups as horizontal bands and distributes each group's nodes. Use explicit group and node coordinates for showcase-quality figures.
 - `layered-system` draws nested rectangles from the node order.
 - `matrix` uses a `matrix` object with `rows`, `columns`, and `cells`.
 - `mechanism` places nodes around an ellipse and connects specified edges.

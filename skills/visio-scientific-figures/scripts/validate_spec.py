@@ -10,6 +10,7 @@ from typing import Any
 TEMPLATES = {"flowchart", "framework", "layered-system", "matrix", "mechanism"}
 STYLE_PACKS = {"nature-muted", "ieee-clean", "chinese-journal", "presentation-color"}
 IMAGE_MODES = {"left", "top", "fill"}
+CONNECTOR_ROUTES = {"auto", "elbow"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".svg", ".emf"}
 REQUIRED_FIELDS = {"template", "title", "canvas", "style", "nodes", "groups", "connectors", "exports"}
 
@@ -160,6 +161,12 @@ def validate_groups(spec: dict[str, Any], nodes: set[str], findings: list[Findin
         if group_id in seen:
             findings.append(Finding("error", f"duplicate group id: `{group_id}`."))
         seen.add(group_id)
+        for key in ("x", "y", "w", "h", "title_x", "title_y", "title_w"):
+            if key in group and not isinstance(group[key], (int, float)):
+                findings.append(Finding("error", f"`groups[{idx}].{key}` must be numeric."))
+        for key in ("w", "h", "title_w"):
+            if key in group and isinstance(group[key], (int, float)) and group[key] <= 0:
+                findings.append(Finding("error", f"`groups[{idx}].{key}` must be positive."))
         for node_id in group.get("nodes", []):
             if node_id not in nodes:
                 findings.append(Finding("error", f"group `{group_id}` references unknown node `{node_id}`."))
@@ -175,6 +182,9 @@ def validate_connectors(spec: dict[str, Any], nodes: set[str], findings: list[Fi
             value = edge.get(endpoint)
             if value not in nodes:
                 findings.append(Finding("error", f"connector {idx} has unknown `{endpoint}` node `{value}`."))
+        route = edge.get("route", "auto")
+        if route not in CONNECTOR_ROUTES:
+            findings.append(Finding("error", f"connector {idx} route must be auto or elbow."))
 
 
 def validate_exports(spec: dict[str, Any], findings: list[Finding]) -> None:

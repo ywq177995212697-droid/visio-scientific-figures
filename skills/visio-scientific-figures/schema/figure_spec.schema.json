@@ -167,6 +167,9 @@
         "image_pad": {
           "type": "number",
           "minimum": 0
+        },
+        "font_family": {
+          "type": "string"
         }
       }
     },
@@ -190,6 +193,30 @@
           "items": {
             "type": "string"
           }
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "w": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "h": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "title_x": {
+          "type": "number"
+        },
+        "title_y": {
+          "type": "number"
+        },
+        "title_w": {
+          "type": "number",
+          "exclusiveMinimum": 0
         }
       }
     },
@@ -212,6 +239,13 @@
         },
         "dashed": {
           "type": "boolean"
+        },
+        "route": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "elbow"
+          ]
         }
       }
     },

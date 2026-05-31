@@ -225,16 +225,24 @@ def inspect_shapes(shapes: list[ShapeInfo], page_size_in: tuple[float, float]) -
 
 def inspect_connectors(shapes: list[ShapeInfo], content: list[ShapeInfo]) -> list[Issue]:
     issues: list[Issue] = []
+    text_shapes = [s for s in content if s.text and not s.name.endswith("_image")]
     for line in [s for s in shapes if s.has_connector_cells]:
         length = math.hypot(line.end_x - line.begin_x, line.end_y - line.begin_y)
         if length < 0.15:
             issues.append(Issue("warn", f"very short connector or line: {label(line)}"))
-        if line.end_arrow in ("", "0") and "label_" not in line.name:
+        if line.end_arrow in ("", "0") and "label_" not in line.name and not line.name.startswith("route_segment_"):
             issues.append(Issue("warn", f"line may be missing arrow head: {label(line)}"))
         if content and not endpoint_near_shape(line.begin_x, line.begin_y, content):
             issues.append(Issue("warn", f"connector start may be detached: {label(line)}"))
         if content and not endpoint_near_shape(line.end_x, line.end_y, content):
             issues.append(Issue("warn", f"connector end may be detached: {label(line)}"))
+        for shape in text_shapes:
+            if endpoint_near_shape(line.begin_x, line.begin_y, [shape], tolerance=0.04):
+                continue
+            if endpoint_near_shape(line.end_x, line.end_y, [shape], tolerance=0.04):
+                continue
+            if segment_hits_rect(line.begin_x, line.begin_y, line.end_x, line.end_y, shape, pad=0.03):
+                issues.append(Issue("warn", f"connector crosses text or title: {label(line)} over {label(shape)}"))
     return issues
 
 
@@ -244,6 +252,49 @@ def endpoint_near_shape(x: float, y: float, shapes: list[ShapeInfo], tolerance: 
         close_y = shape.y - tolerance <= y <= shape.y + shape.h + tolerance
         if close_x and close_y:
             return True
+    return False
+
+
+def segment_hits_rect(x1: float, y1: float, x2: float, y2: float, shape: ShapeInfo, pad: float = 0.0) -> bool:
+    left = shape.x - pad
+    right = shape.x + shape.w + pad
+    top = shape.y - pad
+    bottom = shape.y + shape.h + pad
+    if left <= x1 <= right and top <= y1 <= bottom:
+        return True
+    if left <= x2 <= right and top <= y2 <= bottom:
+        return True
+    edges = [
+        (left, top, right, top),
+        (right, top, right, bottom),
+        (right, bottom, left, bottom),
+        (left, bottom, left, top),
+    ]
+    return any(segments_intersect(x1, y1, x2, y2, *edge) for edge in edges)
+
+
+def segments_intersect(ax: float, ay: float, bx: float, by: float,
+                       cx: float, cy: float, dx: float, dy: float) -> bool:
+    def orient(px: float, py: float, qx: float, qy: float, rx: float, ry: float) -> float:
+        return (qx - px) * (ry - py) - (qy - py) * (rx - px)
+
+    def overlaps(px: float, py: float, qx: float, qy: float, rx: float, ry: float) -> bool:
+        return min(px, qx) - 1e-9 <= rx <= max(px, qx) + 1e-9 and min(py, qy) - 1e-9 <= ry <= max(py, qy) + 1e-9
+
+    o1 = orient(ax, ay, bx, by, cx, cy)
+    o2 = orient(ax, ay, bx, by, dx, dy)
+    o3 = orient(cx, cy, dx, dy, ax, ay)
+    o4 = orient(cx, cy, dx, dy, bx, by)
+    if o1 * o2 < 0 and o3 * o4 < 0:
+        return True
+    if abs(o1) < 1e-9 and overlaps(ax, ay, bx, by, cx, cy):
+        return True
+    if abs(o2) < 1e-9 and overlaps(ax, ay, bx, by, dx, dy):
+        return True
+    if abs(o3) < 1e-9 and overlaps(cx, cy, dx, dy, ax, ay):
+        return True
+    if abs(o4) < 1e-9 and overlaps(cx, cy, dx, dy, bx, by):
+        return True
     return False
 
 

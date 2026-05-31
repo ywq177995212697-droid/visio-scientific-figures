@@ -49,6 +49,7 @@ Read `references/spec-format.md` before writing a new spec. Read `references/ima
 - Use node `image` paths for generated icons or figure panels; keep labels as editable Visio text whenever possible.
 - Run `scripts/validate_spec.py` before rendering when a spec is hand-written or derived from a paper paragraph.
 - Prefer short node text. Use line breaks only when they improve readability.
+- Avoid presentation-style typography. Use restrained journal fonts, usually Times New Roman or Arial for English figures and SimSun or Microsoft YaHei for Chinese figures. Use bold sparingly.
 - Use one of the style packs unless the user asks for a custom palette: `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`.
 - For Chinese papers, prefer `chinese-journal` unless the target journal or slide style suggests otherwise.
 
@@ -64,5 +65,6 @@ Read `references/spec-format.md` before writing a new spec. Read `references/ima
 - Always keep the `.vsdx` as the editable source of truth.
 - Export `.png` for visual review and `.emf` for Word/paper insertion when Visio supports it.
 - Verify that text is readable, no important shapes overlap, arrows terminate near intended nodes, and the image is not blank.
+- Treat connector-over-text conflicts as real layout defects, including arrows crossing group titles, labels, or callouts.
 - If Visio or pywin32 fails, run `scripts/check_environment.py` and fix the reported dependency before editing figure logic.
 - Do not include private paper text, original manuscript files, or sensitive project assets in open-source examples.
