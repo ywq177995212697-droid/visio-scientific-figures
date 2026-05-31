@@ -7,6 +7,7 @@ Editable Microsoft Visio scientific figures for papers, theses, reports, and pre
 ## Features / 功能
 
 - Template-driven Visio generation: `flowchart`, `framework`, `layered-system`, `matrix`, `mechanism`.
+- Import generated PNG/JPG/SVG/EMF assets into Visio nodes for richer icons and figure panels.
 - Paper-friendly style packs: `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`.
 - Editable `.vsdx` as the source of truth, with `.png` preview and `.emf` Word-friendly export.
 - Quality checks for missing outputs, blank/small files, page bounds, likely text overflow, contrast, overlap, and Chinese font availability.
@@ -37,6 +38,22 @@ Copy-Item -Recurse .\skills\visio-scientific-figures $env:USERPROFILE\.codex\ski
 ```
 
 If `CODEX_HOME` is set, install into `$env:CODEX_HOME\skills` instead.
+
+## Use with Claude Code / 在 Claude Code 中使用
+
+Claude Code supports Skills with `SKILL.md`. Copy this skill folder to your user or project skills directory:
+
+```powershell
+Copy-Item -Recurse .\skills\visio-scientific-figures $env:USERPROFILE\.claude\skills\
+```
+
+Or for one project:
+
+```powershell
+Copy-Item -Recurse .\skills\visio-scientific-figures .\.claude\skills\
+```
+
+The `agents/openai.yaml` file is Codex UI metadata; Claude Code mainly uses `SKILL.md`, `scripts/`, `references/`, and `assets/`.
 
 ## Quick Start / 快速开始
 
@@ -73,6 +90,21 @@ python .\skills\visio-scientific-figures\scripts\check_quality.py .\examples\toy
 ```
 
 See `skills/visio-scientific-figures/references/spec-format.md` for details.
+
+## AI Image Assets / AI 图标资产
+
+When Visio shapes cannot faithfully reproduce a user's source icons, generate clean low-AI-look assets with an image model, save them under an `assets/` folder, and reference them in the spec:
+
+```json
+{
+  "id": "sensor",
+  "text": "Sensor data",
+  "image": "assets/sensor-data.png",
+  "image_mode": "left"
+}
+```
+
+Use editable Visio text for labels and generated image assets only for the visual icon or panel. See `skills/visio-scientific-figures/references/image-assets.md`.
 
 ## 中文使用建议
 

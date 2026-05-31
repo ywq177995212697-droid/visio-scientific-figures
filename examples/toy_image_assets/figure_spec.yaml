@@ -1,0 +1,24 @@
+{
+  "template": "flowchart",
+  "title": "Toy Workflow with Imported Image Assets",
+  "canvas": { "width_in": 8.2, "height_in": 3.8 },
+  "style": "presentation-color",
+  "nodes": [
+    {
+      "id": "sensor",
+      "text": "Sensor data",
+      "image": "assets/sensor-icon.svg",
+      "image_mode": "left"
+    },
+    { "id": "clean", "text": "Clean and align data" },
+    { "id": "model", "text": "Run simulation model" },
+    { "id": "figure", "text": "Export editable Visio figure" }
+  ],
+  "groups": [],
+  "connectors": [
+    { "from": "sensor", "to": "clean" },
+    { "from": "clean", "to": "model" },
+    { "from": "model", "to": "figure" }
+  ],
+  "exports": { "dir": "output", "stem": "toy_image_assets" }
+}

@@ -1,6 +1,6 @@
 ---
 name: visio-scientific-figures
-description: Create, edit, export, and quality-check editable Microsoft Visio scientific figures for papers, theses, reports, and presentations. Use when Codex needs to turn research text into Visio diagrams, generate paper-ready flowcharts/frameworks/layered systems/matrices/mechanism figures, modify or export .vsdx files, or validate PNG/EMF/VSDX outputs for readability, layout, fonts, and publication quality.
+description: Create, edit, export, and quality-check editable Microsoft Visio scientific figures for papers, theses, reports, and presentations. Use when Codex needs to turn research text into Visio diagrams, generate paper-ready flowcharts/frameworks/layered systems/matrices/mechanism figures, create or import AI-generated icon/image assets for Visio nodes, modify or export .vsdx files, or validate PNG/EMF/VSDX outputs for readability, layout, fonts, and publication quality.
 ---
 
 # Visio Scientific Figures
@@ -9,20 +9,21 @@ description: Create, edit, export, and quality-check editable Microsoft Visio sc
 
 1. Clarify the figure intent from the user's paper text, sketch, or existing `.vsdx`.
 2. Choose a template: `flowchart`, `framework`, `layered-system`, `matrix`, or `mechanism`.
-3. Write a `figure_spec.yaml` or `figure_spec.json` with `template`, `title`, `canvas`, `style`, `nodes`, `groups`, `connectors`, and `exports`.
-4. Render with:
+3. If the source figure needs realistic icons or pictorial elements, generate/import image assets first and reference them from nodes with `image`.
+4. Write a `figure_spec.yaml` or `figure_spec.json` with `template`, `title`, `canvas`, `style`, `nodes`, `groups`, `connectors`, and `exports`.
+5. Render with:
 
 ```bash
 python scripts/render_spec.py path/to/figure_spec.yaml
 ```
 
-5. Run the quality checker:
+6. Run the quality checker:
 
 ```bash
 python scripts/check_quality.py path/to/output.vsdx --png path/to/output.png --emf path/to/output.emf --report path/to/quality_report.md
 ```
 
-6. Read `quality_report.md`, fix the spec or script, and re-render until the report has no errors and only acceptable warnings.
+7. Read `quality_report.md`, fix the spec or script, and re-render until the report has no errors and only acceptable warnings.
 
 ## Template Selection
 
@@ -32,13 +33,14 @@ python scripts/check_quality.py path/to/output.vsdx --png path/to/output.png --e
 - Use `matrix` for comparison tables, capability-task maps, method-feature maps, and evaluation grids.
 - Use `mechanism` for causal relations, feedback loops, interactions, and circular process figures.
 
-Read `references/spec-format.md` before writing a new spec. Read `references/visio-com-notes.md` before patching scripts or editing existing `.vsdx` files. Read `references/quality-guidelines.md` when a figure is meant for a paper submission.
+Read `references/spec-format.md` before writing a new spec. Read `references/image-assets.md` when a figure needs icons, equipment illustrations, screenshots, or AI-generated bitmap assets. Read `references/visio-com-notes.md` before patching scripts or editing existing `.vsdx` files. Read `references/quality-guidelines.md` when a figure is meant for a paper submission.
 
 ## Figure Spec Rules
 
 - Keep specs portable: use relative output paths and avoid user-specific absolute paths.
 - Use `canvas.width_in` and `canvas.height_in` in inches. Paper figures usually work best between 4-8 inches wide for single-column and 7-12 inches wide for double-column figures.
 - Put stable IDs on all nodes. Connectors refer to `from` and `to` IDs.
+- Use node `image` paths for generated icons or figure panels; keep labels as editable Visio text whenever possible.
 - Prefer short node text. Use line breaks only when they improve readability.
 - Use one of the style packs unless the user asks for a custom palette: `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`.
 - For Chinese papers, prefer `chinese-journal` unless the target journal or slide style suggests otherwise.

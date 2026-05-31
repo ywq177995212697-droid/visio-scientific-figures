@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import math
+import time
 from pathlib import Path
 from typing import Any
 
 import win32com.client
+import pythoncom
 
 
 STYLE_PACKS = {
@@ -88,11 +91,12 @@ def output_paths(spec: dict[str, Any], spec_dir: Path) -> dict[str, Path]:
 
 
 class VisioCanvas:
-    def __init__(self, app: Any, width: float, height: float, style: dict[str, Any]):
+    def __init__(self, app: Any, width: float, height: float, style: dict[str, Any], asset_base: Path):
         self.app = app
         self.width = width
         self.height = height
         self.style = style
+        self.asset_base = asset_base
         self.doc = app.Documents.Add("")
         self.page = app.ActivePage
         self.page.PageSheet.CellsU("PageWidth").FormulaU = f"{width} in"
@@ -157,6 +161,25 @@ class VisioCanvas:
         shape.CellsU("Para.HorzAlign").FormulaU = str(align)
         return shape
 
+    def image(self, node_id: str, x: float, y: float, w: float, h: float,
+              path: str, register: bool = False) -> Any:
+        asset = Path(path)
+        if not asset.is_absolute():
+            asset = self.asset_base / asset
+        if not asset.exists():
+            raise SystemExit(f"Missing image asset for {node_id}: {asset}")
+        shape = self.page.Import(str(asset.resolve()))
+        shape.NameU = node_id
+        shape.CellsU("PinX").FormulaU = f"{x + w / 2} in"
+        shape.CellsU("PinY").FormulaU = f"{self.y(y + h / 2)} in"
+        shape.CellsU("Width").FormulaU = f"{w} in"
+        shape.CellsU("Height").FormulaU = f"{h} in"
+        shape.CellsU("LinePattern").FormulaU = "0"
+        shape.CellsU("FillPattern").FormulaU = "0"
+        if register:
+            self.shapes[node_id] = shape
+        return shape
+
     def line(self, x1: float, y1: float, x2: float, y2: float, dashed: bool = False,
              arrow: bool = True, color: str | None = None, label: str = "") -> None:
         line = self.page.DrawLine(x1, self.y(y1), x2, self.y(y2))
@@ -185,10 +208,24 @@ class VisioCanvas:
         return pin_x - width / 2, self.height - (pin_y + height / 2), width, height
 
     def export(self, paths: dict[str, Path]) -> None:
-        self.page.Export(str(paths["png"].resolve()))
-        self.page.Export(str(paths["emf"].resolve()))
-        self.doc.SaveAs(str(paths["vsdx"].resolve()))
+        for path in paths.values():
+            if path.exists():
+                path.unlink()
+        self._visio_call(lambda: self.page.Export(str(paths["png"].resolve())))
+        self._visio_call(lambda: self.page.Export(str(paths["emf"].resolve())))
+        time.sleep(0.2)
+        self._visio_call(lambda: self.doc.SaveAs(str(paths["vsdx"].resolve())))
         self.doc.Close()
+
+    def _visio_call(self, action: Any) -> Any:
+        last_error = None
+        for _attempt in range(3):
+            try:
+                return action()
+            except Exception as exc:
+                last_error = exc
+                time.sleep(0.8)
+        raise last_error
 
 
 def node_box(node: dict[str, Any], fallback: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
@@ -198,6 +235,49 @@ def node_box(node: dict[str, Any], fallback: tuple[float, float, float, float]) 
         float(node.get("w", node.get("width", fallback[2]))),
         float(node.get("h", node.get("height", fallback[3]))),
     )
+
+
+def draw_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, float, float, float],
+              fill: str, line: str, default_shape: str = "rect",
+              default_font_size: float = 9.0, default_bold: bool = True) -> Any:
+    node_id = node["id"]
+    text = node.get("text", node_id)
+    image_path = node.get("image")
+    shape_kind = node.get("shape", default_shape)
+    font_size = float(node.get("font_size", default_font_size))
+    bold = bool(node.get("bold", default_bold))
+    if image_path and shape_kind == "image":
+        return c.image(node_id, *box, image_path, register=True)
+    shape_func = c.ellipse if shape_kind == "ellipse" else c.rect
+    container_text = "" if image_path else text
+    shape = shape_func(node_id, *box, container_text, fill, line,
+                       font_size=font_size, bold=bold)
+    if image_path:
+        place_image_in_node(c, node, box, image_path, text, font_size, bold)
+    return shape
+
+
+def place_image_in_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, float, float, float],
+                        image_path: str, text: str, font_size: float, bold: bool) -> None:
+    x, y, w, h = box
+    pad = float(node.get("image_pad", 0.08))
+    mode = node.get("image_mode", "left")
+    if mode == "top":
+        img_h = min(h * 0.46, h - 2 * pad)
+        img_w = min(w - 2 * pad, img_h * 1.35)
+        c.image(f"{node['id']}_image", x + (w - img_w) / 2, y + pad, img_w, img_h, image_path)
+        c.text(f"{node['id']}_label", x + pad, y + pad + img_h + 0.04,
+               w - 2 * pad, max(0.12, h - img_h - 3 * pad), text,
+               font_size=font_size, bold=bold)
+        return
+    if mode == "fill":
+        c.image(f"{node['id']}_image", x + pad, y + pad, w - 2 * pad, h - 2 * pad, image_path)
+        return
+    img_size = min(h - 2 * pad, max(0.16, w * 0.28))
+    c.image(f"{node['id']}_image", x + pad, y + (h - img_size) / 2, img_size, img_size, image_path)
+    c.text(f"{node['id']}_label", x + pad * 2 + img_size, y + pad,
+           max(0.12, w - img_size - 3 * pad), h - 2 * pad, text,
+           font_size=font_size, bold=bold)
 
 
 def draw_title(c: VisioCanvas, spec: dict[str, Any]) -> None:
@@ -218,9 +298,7 @@ def draw_flowchart(c: VisioCanvas, spec: dict[str, Any]) -> None:
         fill = node.get("fill") or c.style["fills"][idx % len(c.style["fills"])]
         line = node.get("line") or c.style["strokes"][idx % len(c.style["strokes"])]
         box = node_box(node, (0.55 + col * cell_w, 0.8 + row * cell_h, cell_w - 0.35, 0.58))
-        shape = c.ellipse if node.get("shape") == "ellipse" else c.rect
-        shape(node["id"], *box, node.get("text", node["id"]), fill, line,
-              font_size=float(node.get("font_size", 9.2)), bold=bool(node.get("bold", True)))
+        draw_node(c, node, box, fill, line, default_font_size=9.2)
     connect_all(c, spec)
 
 
@@ -239,7 +317,7 @@ def draw_framework(c: VisioCanvas, spec: dict[str, Any]) -> None:
         for ni, node_id in enumerate(ids):
             node = node_map[node_id]
             box = node_box(node, (0.65 + ni * step, y + 0.45, step - 0.22, 0.46))
-            c.rect(node_id, *box, node.get("text", node_id), "#FFFFFF", line, font_size=8.2, bold=True)
+            draw_node(c, node, box, "#FFFFFF", line, default_font_size=8.2)
     connect_all(c, spec)
 
 
@@ -253,8 +331,11 @@ def draw_layered_system(c: VisioCanvas, spec: dict[str, Any]) -> None:
         fill = node.get("fill") or c.style["fills"][idx % len(c.style["fills"])]
         line = node.get("line") or c.style["strokes"][idx % len(c.style["strokes"])]
         font = node.get("font") or c.style["ink"]
-        c.rect(node["id"], *box, node.get("text", node["id"]), fill, line, font=font,
-               font_size=float(node.get("font_size", 10.0)), bold=True)
+        if node.get("image"):
+            draw_node(c, node, box, fill, line, default_font_size=10.0)
+        else:
+            c.rect(node["id"], *box, node.get("text", node["id"]), fill, line, font=font,
+                   font_size=float(node.get("font_size", 10.0)), bold=True)
 
 
 def draw_matrix(c: VisioCanvas, spec: dict[str, Any]) -> None:
@@ -281,7 +362,7 @@ def draw_mechanism(c: VisioCanvas, spec: dict[str, Any]) -> None:
         box = node_box(node, (cx + rx * math.cos(angle) - 0.65, cy + ry * math.sin(angle) - 0.25, 1.3, 0.5))
         fill = c.style["fills"][idx % len(c.style["fills"])]
         line = c.style["strokes"][idx % len(c.style["strokes"])]
-        c.rect(node["id"], *box, node.get("text", node["id"]), fill, line, font_size=8.5, bold=True)
+        draw_node(c, node, box, fill, line, default_font_size=8.5)
     connect_all(c, spec)
 
 
@@ -301,17 +382,19 @@ TEMPLATES = {
 
 
 def render(spec_path: Path) -> dict[str, Path]:
+    pythoncom.CoInitialize()
     spec = load_spec(spec_path)
     style = style_for(spec)
     canvas = spec.get("canvas", {})
     width = float(canvas.get("width_in", 7.5))
     height = float(canvas.get("height_in", 5.0))
     paths = output_paths(spec, spec_path.parent)
-    app = win32com.client.Dispatch("Visio.Application")
+    app = win32com.client.DispatchEx("Visio.Application")
     app.Visible = False
     app.AlertResponse = 7
+    c = None
     try:
-        c = VisioCanvas(app, width, height, style)
+        c = VisioCanvas(app, width, height, style, spec_path.parent)
         draw_title(c, spec)
         template = spec.get("template", "flowchart")
         if template not in TEMPLATES:
@@ -319,7 +402,19 @@ def render(spec_path: Path) -> dict[str, Path]:
         TEMPLATES[template](c, spec)
         c.export(paths)
     finally:
-        app.Quit()
+        try:
+            for idx in range(app.Documents.Count, 0, -1):
+                app.Documents.Item(idx).Close()
+        except Exception:
+            pass
+        try:
+            app.Quit()
+        except Exception:
+            pass
+        c = None
+        app = None
+        gc.collect()
+        pythoncom.CoUninitialize()
     return paths
 
 
