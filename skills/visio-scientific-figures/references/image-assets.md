@@ -12,7 +12,7 @@ Use generated bitmap assets when a figure needs realistic, domain-specific icons
 
 1. Identify the icon or illustration roles from the source figure.
 2. Write one concise prompt per asset. Ask for clean, paper-friendly, low-decoration visuals with no text unless text is essential.
-3. Generate each asset with the available image generation tool.
+3. Generate each asset with the available image generation tool, such as Image 2 when available in the host environment.
 4. Save assets under the working example or project folder, for example `assets/sensor-data.png`.
 5. Add the asset path to the node with `image`, and choose `image_mode`: `left`, `top`, `fill`, or `shape: image`.
 6. Render the Visio file and run the quality checker.
@@ -39,5 +39,6 @@ consistent lighting, suitable for insertion into a Visio research diagram.
 
 - Prefer square or mildly horizontal assets for node icons.
 - Avoid generated text inside images; use editable Visio text next to the asset.
+- Prefer transparent, white, or very light backgrounds so imported assets blend into Visio nodes.
 - Keep a copy of the generation prompt near the spec when reproducibility matters.
 - Do not import private, copyrighted, or sensitive source images into open-source examples.

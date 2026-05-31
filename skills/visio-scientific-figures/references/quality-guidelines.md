@@ -15,6 +15,7 @@ Use the quality checker as a first pass, then inspect the PNG manually.
 - Title and node labels match the paper terminology.
 - No label overlaps another label, arrow, or important shape.
 - All arrows have clear direction and terminate near the intended target.
+- No connector is suspiciously short, detached from nodes, or missing an arrowhead when it represents direction.
 - Layered diagrams encode hierarchy visually, not only through labels.
 - Framework diagrams distinguish input, processing, support, and output regions.
 - The figure remains readable when zoomed to the size it will occupy in the paper.

@@ -2,6 +2,14 @@
 
 The renderer accepts JSON files and JSON-compatible `.yaml` files without extra dependencies. Full YAML works when `PyYAML` is installed.
 
+Validate specs before rendering:
+
+```bash
+python scripts/validate_spec.py path/to/figure_spec.yaml
+```
+
+The bundled schema lives at `schema/figure_spec.schema.json`.
+
 Minimum fields:
 
 ```json
@@ -61,3 +69,7 @@ Supported image modes:
 - `fill`: image fills the node frame with no label overlay.
 
 Set `"shape": "image"` to import an image as the node itself, so connectors attach to the imported image bounds.
+
+## Validation Checks
+
+`validate_spec.py` catches missing required fields, unknown templates or styles, duplicate node IDs, group references to missing nodes, connector endpoints that do not exist, missing image assets, unsupported image extensions, invalid matrix objects, and unusually large canvases.

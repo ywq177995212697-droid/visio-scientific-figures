@@ -1,0 +1,58 @@
+template: framework
+title: Toy AI-Assisted Research Figure Pipeline
+canvas:
+  width_in: 9.2
+  height_in: 5.0
+style: nature-muted
+nodes:
+  - id: literature
+    text: Literature signals
+    image: assets/literature.svg
+    image_mode: left
+  - id: public_data
+    text: Public datasets
+    image: assets/dataset.svg
+    image_mode: left
+  - id: spec_builder
+    text: Figure spec builder
+    image: assets/spec.svg
+    image_mode: left
+  - id: visio_renderer
+    text: Editable Visio renderer
+    image: assets/visio.svg
+    image_mode: left
+  - id: quality_loop
+    text: Quality repair loop
+    image: assets/check.svg
+    image_mode: left
+  - id: paper_outputs
+    text: VSDX / PNG / EMF outputs
+    image: assets/export.svg
+    image_mode: left
+groups:
+  - id: evidence
+    title: Evidence Layer
+    nodes: [literature, public_data]
+  - id: generation
+    title: Generation Layer
+    nodes: [spec_builder, visio_renderer]
+  - id: assurance
+    title: Assurance & Export Layer
+    nodes: [quality_loop, paper_outputs]
+connectors:
+  - from: literature
+    to: spec_builder
+  - from: public_data
+    to: spec_builder
+  - from: spec_builder
+    to: visio_renderer
+    label: render
+  - from: visio_renderer
+    to: quality_loop
+    label: inspect
+  - from: quality_loop
+    to: paper_outputs
+    label: approve
+exports:
+  dir: output
+  stem: research_framework_with_assets

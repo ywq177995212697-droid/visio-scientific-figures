@@ -2,16 +2,52 @@
 
 Editable Microsoft Visio scientific figures for papers, theses, reports, and presentations.
 
-面向科研论文和报告的 Codex skill：把论文段落、图形草稿或结构化 spec 转成可编辑的 `.vsdx`，并导出 `.png` / `.emf`，同时生成质量检查报告。
+面向科研论文、学位论文和技术报告的 Codex/Claude Code skill：把论文段落、图形草稿或结构化 `figure_spec` 转成可编辑 `.vsdx`，并导出 `.png` / `.emf`，同时生成质量检查报告。
+
+![License](https://img.shields.io/badge/license-MIT-green)
+![Platform](https://img.shields.io/badge/platform-Windows%20%2B%20Visio-blue)
+![Skill](https://img.shields.io/badge/Codex%20Skill-Visio%20Figures-6f42c1)
+
+## Why Star This
+
+- Template-driven generation for common research diagrams.
+- Editable Visio source files, not flat screenshots.
+- AI image asset workflow for icons and pictorial panels that Visio primitives cannot reproduce well.
+- Built-in spec validation, environment checks, and quality reports.
+- Open-source-safe examples with no private manuscript material.
+- Works as a Codex skill and can also be copied into Claude Code skills.
+
+## Gallery
+
+| Flowchart | Framework |
+| --- | --- |
+| ![Toy flowchart](docs/gallery/toy_flowchart.png) | ![Toy framework](docs/gallery/toy_framework.png) |
+
+| Layered system | AI image assets |
+| --- | --- |
+| ![Toy layered system](docs/gallery/toy_layered_system.png) | ![Toy image assets](docs/gallery/toy_image_assets.png) |
+
+| Research framework with assets |
+| --- |
+| ![Research framework with assets](docs/gallery/research_framework_with_assets.png) |
+
+Render examples locally, then refresh the gallery:
+
+```powershell
+python .\skills\visio-scientific-figures\scripts\make_gallery.py
+```
+
+Gallery previews live in [`docs/gallery`](docs/gallery) after generation.
 
 ## Features / 功能
 
-- Template-driven Visio generation: `flowchart`, `framework`, `layered-system`, `matrix`, `mechanism`.
-- Import generated PNG/JPG/SVG/EMF assets into Visio nodes for richer icons and figure panels.
-- Paper-friendly style packs: `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`.
-- Editable `.vsdx` as the source of truth, with `.png` preview and `.emf` Word-friendly export.
-- Quality checks for missing outputs, blank/small files, page bounds, likely text overflow, contrast, overlap, and Chinese font availability.
-- Open-source-safe toy examples. No private manuscript or real research assets are included.
+- Templates: `flowchart`, `framework`, `layered-system`, `matrix`, `mechanism`.
+- Style packs: `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`.
+- Image assets: import PNG/JPG/SVG/EMF assets into Visio nodes for richer icons and panels.
+- Output formats: editable `.vsdx`, review `.png`, Word-friendly `.emf`.
+- Validation: check spec fields, connector references, image paths, matrix fields, and export settings before launching Visio.
+- Quality checks: missing outputs, small files, page bounds, likely text overflow, low contrast, overlap, detached arrows, short connectors, and Chinese font availability.
+- Install helpers for Codex and Claude Code.
 
 ## Requirements / 环境要求
 
@@ -20,42 +56,51 @@ Editable Microsoft Visio scientific figures for papers, theses, reports, and pre
 - Python 3.10+
 - `pywin32`
 - Optional: `PyYAML` for full YAML syntax
+- Optional: `Pillow` for future image inspection helpers
 
 Install dependencies:
 
 ```powershell
-python -m pip install pywin32 pyyaml
+python -m pip install -r requirements.txt
 ```
 
-`PyYAML` is optional if your `.yaml` file uses JSON-compatible syntax, as the bundled examples do.
+Check the environment:
+
+```powershell
+python .\skills\visio-scientific-figures\scripts\check_environment.py
+```
 
 ## Install as a Codex Skill / 安装为 Codex Skill
 
-Copy or symlink the skill folder into your Codex skills directory:
-
 ```powershell
-Copy-Item -Recurse .\skills\visio-scientific-figures $env:USERPROFILE\.codex\skills\
+.\install-codex.ps1
 ```
 
-If `CODEX_HOME` is set, install into `$env:CODEX_HOME\skills` instead.
+If `CODEX_HOME` is set, the script installs into `$env:CODEX_HOME\skills`; otherwise it installs into `$env:USERPROFILE\.codex\skills`.
 
 ## Use with Claude Code / 在 Claude Code 中使用
 
-Claude Code supports Skills with `SKILL.md`. Copy this skill folder to your user or project skills directory:
+Claude Code supports Skills with `SKILL.md`. Install for the current user:
 
 ```powershell
-Copy-Item -Recurse .\skills\visio-scientific-figures $env:USERPROFILE\.claude\skills\
+.\install-claude-code.ps1
 ```
 
-Or for one project:
+Install for one project:
 
 ```powershell
-Copy-Item -Recurse .\skills\visio-scientific-figures .\.claude\skills\
+.\install-claude-code.ps1 -Project -ProjectPath C:\path\to\project
 ```
 
-The `agents/openai.yaml` file is Codex UI metadata; Claude Code mainly uses `SKILL.md`, `scripts/`, `references/`, and `assets/`.
+The `agents/openai.yaml` file is Codex UI metadata. Claude Code mainly uses `SKILL.md`, `scripts/`, `references/`, `schema/`, and `assets/`.
 
 ## Quick Start / 快速开始
+
+Validate a spec:
+
+```powershell
+python .\skills\visio-scientific-figures\scripts\validate_spec.py .\examples\toy_flowchart\figure_spec.yaml
+```
 
 Render a toy flowchart:
 
@@ -89,7 +134,7 @@ python .\skills\visio-scientific-figures\scripts\check_quality.py .\examples\toy
 }
 ```
 
-See `skills/visio-scientific-figures/references/spec-format.md` for details.
+See [`spec-format.md`](skills/visio-scientific-figures/references/spec-format.md) and the bundled JSON Schema at [`figure_spec.schema.json`](skills/visio-scientific-figures/schema/figure_spec.schema.json).
 
 ## AI Image Assets / AI 图标资产
 
@@ -104,14 +149,14 @@ When Visio shapes cannot faithfully reproduce a user's source icons, generate cl
 }
 ```
 
-Use editable Visio text for labels and generated image assets only for the visual icon or panel. See `skills/visio-scientific-figures/references/image-assets.md`.
+Use editable Visio text for labels and generated image assets only for the visual icon or panel. See [`image-assets.md`](skills/visio-scientific-figures/references/image-assets.md).
 
 ## 中文使用建议
 
 - 中文期刊图优先使用 `chinese-journal` 风格包。
 - 保留 `.vsdx` 作为可编辑源文件，投稿或插入 Word 时优先尝试 `.emf`。
 - 生成后必须查看 `quality_report.md`，再人工检查 PNG 预览。
-- 不建议把真实论文正文、涉密项目图、原始 `.docx` 或未脱敏素材放进开源示例。
+- 不要把真实论文正文、涉密项目图、原始 `.docx` 或未脱敏素材放进开源示例。
 
 ## License
 

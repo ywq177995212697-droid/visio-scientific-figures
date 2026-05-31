@@ -36,6 +36,12 @@ class ShapeInfo:
     line: str
     char_color: str
     is_line: bool
+    begin_x: float
+    begin_y: float
+    end_x: float
+    end_y: float
+    end_arrow: str
+    has_connector_cells: bool
 
 
 def cell(shape: ET.Element, name: str) -> str | None:
@@ -90,7 +96,12 @@ def parse_shapes(root: ET.Element, page_h: float) -> list[ShapeInfo]:
         w, h = number(cell(shape, "Width")), number(cell(shape, "Height"))
         pin_x, pin_y = number(cell(shape, "PinX")), number(cell(shape, "PinY"))
         text = text_content(shape)
-        is_line = w < 0.08 or h < 0.08 or any(cell(shape, n) for n in ("BeginX", "EndX"))
+        has_connector_cells = any(cell(shape, n) for n in ("BeginX", "EndX"))
+        is_line = w < 0.08 or h < 0.08 or has_connector_cells
+        begin_x = number(cell(shape, "BeginX"), pin_x - w / 2)
+        begin_y = page_h - number(cell(shape, "BeginY"), pin_y)
+        end_x = number(cell(shape, "EndX"), pin_x + w / 2)
+        end_y = page_h - number(cell(shape, "EndY"), pin_y)
         parsed.append(
             ShapeInfo(
                 shape.attrib.get("ID", "?"),
@@ -104,6 +115,12 @@ def parse_shapes(root: ET.Element, page_h: float) -> list[ShapeInfo]:
                 cell(shape, "LineColor") or "#000000",
                 first_char_cell(shape, "Color") or "#1F2933",
                 is_line,
+                begin_x,
+                begin_y,
+                end_x,
+                end_y,
+                cell(shape, "EndArrow") or "",
+                has_connector_cells,
             )
         )
     return parsed
@@ -202,7 +219,32 @@ def inspect_shapes(shapes: list[ShapeInfo], page_size_in: tuple[float, float]) -
             small = max(0.01, min(first.w * first.h, second.w * second.h))
             if area / small > 0.35 and first.text and second.text:
                 issues.append(Issue("warn", f"major overlap: {label(first)} and {label(second)}"))
+    issues.extend(inspect_connectors(shapes, content))
     return issues
+
+
+def inspect_connectors(shapes: list[ShapeInfo], content: list[ShapeInfo]) -> list[Issue]:
+    issues: list[Issue] = []
+    for line in [s for s in shapes if s.has_connector_cells]:
+        length = math.hypot(line.end_x - line.begin_x, line.end_y - line.begin_y)
+        if length < 0.15:
+            issues.append(Issue("warn", f"very short connector or line: {label(line)}"))
+        if line.end_arrow in ("", "0") and "label_" not in line.name:
+            issues.append(Issue("warn", f"line may be missing arrow head: {label(line)}"))
+        if content and not endpoint_near_shape(line.begin_x, line.begin_y, content):
+            issues.append(Issue("warn", f"connector start may be detached: {label(line)}"))
+        if content and not endpoint_near_shape(line.end_x, line.end_y, content):
+            issues.append(Issue("warn", f"connector end may be detached: {label(line)}"))
+    return issues
+
+
+def endpoint_near_shape(x: float, y: float, shapes: list[ShapeInfo], tolerance: float = 0.18) -> bool:
+    for shape in shapes:
+        close_x = shape.x - tolerance <= x <= shape.x + shape.w + tolerance
+        close_y = shape.y - tolerance <= y <= shape.y + shape.h + tolerance
+        if close_x and close_y:
+            return True
+    return False
 
 
 def label(shape: ShapeInfo) -> str:
