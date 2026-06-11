@@ -1,6 +1,7 @@
 ---
 name: visio-scientific-figures
 description: Create, edit, export, and quality-check editable Microsoft Visio scientific figures for papers, theses, reports, and presentations. Use when Codex needs to turn research text into Visio diagrams, generate paper-ready flowcharts/frameworks/layered systems/matrices/mechanism figures, create or import AI-generated icon/image assets for Visio nodes, modify or export .vsdx files, or validate PNG/EMF/VSDX outputs for readability, layout, fonts, and publication quality.
+allowed-tools: Bash, Read, Write, Edit
 ---
 
 # Visio Scientific Figures
@@ -11,13 +12,13 @@ description: Create, edit, export, and quality-check editable Microsoft Visio sc
 2. Choose a template: `flowchart`, `framework`, `layered-system`, `matrix`, or `mechanism`.
 3. If the source figure needs realistic icons or pictorial elements, generate/import image assets first and reference them from nodes with `image`.
 4. Write a `figure_spec.yaml` or `figure_spec.json` with `template`, `title`, `canvas`, `style`, `nodes`, `groups`, `connectors`, and `exports`.
-5. Validate the spec before launching Visio:
+5. From the skill directory, validate the spec before launching Visio:
 
 ```bash
 python scripts/validate_spec.py path/to/figure_spec.yaml
 ```
 
-6. Render with:
+6. From the same skill directory, render with:
 
 ```bash
 python scripts/render_spec.py path/to/figure_spec.yaml
@@ -68,3 +69,9 @@ Read `references/spec-format.md` before writing a new spec. Read `references/ima
 - Treat connector-over-text conflicts as real layout defects, including arrows crossing group titles, labels, or callouts.
 - If Visio or pywin32 fails, run `scripts/check_environment.py` and fix the reported dependency before editing figure logic.
 - Do not include private paper text, original manuscript files, or sensitive project assets in open-source examples.
+
+## Troubleshooting
+
+- If `render_spec.py` fails before opening Visio, run `python scripts/validate_spec.py path/to/spec.yaml` and fix the reported field or path issue first.
+- If Visio opens but export or COM calls fail, run `python scripts/check_environment.py` and confirm Visio COM plus the expected fonts are registered.
+- If a figure passes rendering but still looks wrong, treat `check_quality.py` warnings as actionable layout defects and iterate on the spec.

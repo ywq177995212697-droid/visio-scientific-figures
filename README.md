@@ -1,22 +1,44 @@
 # Visio Scientific Figures
 
-Editable Microsoft Visio scientific figures for papers, theses, reports, and presentations.
+Editable Microsoft Visio scientific figures from structured specs.
 
-面向科研论文、学位论文和技术报告的 Codex/Claude Code skill：把论文段落、图形草稿或结构化 `figure_spec` 转成可编辑 `.vsdx`，并导出 `.png` / `.emf`，同时生成质量检查报告。
+把论文段落、框架草图或脱敏后的现有图，转成可编辑 `.vsdx`，并导出 `.png` / `.emf`，同时做版式与可读性检查。
 
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%2B%20Visio-blue)
-![Skill](https://img.shields.io/badge/Codex%20Skill-Visio%20Figures-6f42c1)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
-## Why Star This
+## Quickstart
 
-- Template-driven generation for common research diagrams.
-- Editable Visio source files, not flat screenshots.
-- AI image asset workflow for icons and pictorial panels that Visio primitives cannot reproduce well.
-- Anonymized real-paper showcase: blurred source reference plus editable Visio reconstruction.
-- Built-in spec validation, environment checks, and quality reports.
-- Open-source-safe examples with no private manuscript material.
-- Works as a Codex skill and can also be copied into Claude Code skills.
+```powershell
+python -m pip install -r requirements.txt
+python .\skills\visio-scientific-figures\scripts\check_environment.py
+python .\skills\visio-scientific-figures\scripts\validate_spec.py .\examples\toy_flowchart\figure_spec.yaml
+python .\skills\visio-scientific-figures\scripts\render_spec.py .\examples\toy_flowchart\figure_spec.yaml
+python .\skills\visio-scientific-figures\scripts\check_quality.py .\examples\toy_flowchart\output\toy_flowchart.vsdx --png .\examples\toy_flowchart\output\toy_flowchart.png --emf .\examples\toy_flowchart\output\toy_flowchart.emf --report .\examples\toy_flowchart\output\quality_report.md
+```
+
+Install into local agents:
+
+```powershell
+.\install-codex.ps1
+.\install-claude-code.ps1
+```
+
+## Why This Repo Exists
+
+- Keeps `.vsdx` as the source of truth instead of a flat screenshot.
+- Generates common research diagram types from a reproducible `figure_spec.yaml/json`.
+- Imports AI-generated or hand-drawn icons when Visio primitives are not enough.
+- Checks for bounds errors, overlaps, text overflow, connector issues, and weak typography before you ship the figure.
+
+## Featured Example
+
+This repo includes an anonymized real-paper reconstruction instead of only toy boxes and arrows.
+
+![Anonymized real-paper reconstruction](docs/gallery/research_framework_with_assets.png)
+
+The example keeps the complexity of a journal-style framework figure while blurring the source reference and replacing private terms with neutral labels.
 
 ## Gallery
 
@@ -24,140 +46,111 @@ Editable Microsoft Visio scientific figures for papers, theses, reports, and pre
 | --- | --- |
 | ![Toy flowchart](docs/gallery/toy_flowchart.png) | ![Toy framework](docs/gallery/toy_framework.png) |
 
-| Layered system | AI image assets |
+| Layered system | Image assets |
 | --- | --- |
 | ![Toy layered system](docs/gallery/toy_layered_system.png) | ![Toy image assets](docs/gallery/toy_image_assets.png) |
 
-| Anonymized real-paper reconstruction |
-| --- |
-| ![Anonymized real-paper reconstruction](docs/gallery/research_framework_with_assets.png) |
-
-Render examples locally, then refresh the gallery:
+Refresh the gallery after rendering examples:
 
 ```powershell
 python .\skills\visio-scientific-figures\scripts\make_gallery.py
 ```
 
-Gallery previews live in [`docs/gallery`](docs/gallery) after generation.
+## At a Glance
 
-## Features / 功能
+| Surface | Current state |
+| --- | --- |
+| Input | `figure_spec.yaml/json`, paper paragraph, sketch, or existing figure |
+| Output | Editable `.vsdx` plus `.png` and `.emf` |
+| Templates | `flowchart`, `framework`, `layered-system`, `matrix`, `mechanism` |
+| QA | Bounds, overlaps, text overflow, contrast, detached arrows, connector-over-text |
+| Asset path | Native Visio shapes plus imported bitmap icons/images |
+| Best fit | Paper figures, thesis diagrams, system frameworks, workflow figures |
 
-- Templates: `flowchart`, `framework`, `layered-system`, `matrix`, `mechanism`.
-- Style packs: `nature-muted`, `ieee-clean`, `chinese-journal`, `presentation-color`.
-- Image assets: import PNG/JPG/SVG/EMF assets into Visio nodes for richer icons and panels.
-- Output formats: editable `.vsdx`, review `.png`, Word-friendly `.emf`.
-- Validation: check spec fields, connector references, image paths, matrix fields, and export settings before launching Visio.
-- Quality checks: missing outputs, small files, page bounds, likely text overflow, low contrast, overlap, detached arrows, short connectors, and Chinese font availability.
-- Install helpers for Codex and Claude Code.
+## Core Surface
 
-## Requirements / 环境要求
+Supported templates:
 
-- Windows
-- Microsoft Visio
-- Python 3.10+
-- `pywin32`
-- Optional: `PyYAML` for full YAML syntax
-- Optional: `Pillow` for future image inspection helpers
+- `flowchart`
+- `framework`
+- `layered-system`
+- `matrix`
+- `mechanism`
 
-Install dependencies:
+Supported style packs:
 
-```powershell
-python -m pip install -r requirements.txt
-```
+- `nature-muted`
+- `ieee-clean`
+- `chinese-journal`
+- `presentation-color`
 
-Check the environment:
-
-```powershell
-python .\skills\visio-scientific-figures\scripts\check_environment.py
-```
-
-## Install as a Codex Skill / 安装为 Codex Skill
-
-```powershell
-.\install-codex.ps1
-```
-
-If `CODEX_HOME` is set, the script installs into `$env:CODEX_HOME\skills`; otherwise it installs into `$env:USERPROFILE\.codex\skills`.
-
-## Use with Claude Code / 在 Claude Code 中使用
-
-Claude Code supports Skills with `SKILL.md`. Install for the current user:
-
-```powershell
-.\install-claude-code.ps1
-```
-
-Install for one project:
-
-```powershell
-.\install-claude-code.ps1 -Project -ProjectPath C:\path\to\project
-```
-
-The `agents/openai.yaml` file is Codex UI metadata. Claude Code mainly uses `SKILL.md`, `scripts/`, `references/`, `schema/`, and `assets/`.
-
-## Quick Start / 快速开始
-
-Validate a spec:
-
-```powershell
-python .\skills\visio-scientific-figures\scripts\validate_spec.py .\examples\toy_flowchart\figure_spec.yaml
-```
-
-Render a toy flowchart:
-
-```powershell
-python .\skills\visio-scientific-figures\scripts\render_spec.py .\examples\toy_flowchart\figure_spec.yaml
-```
-
-Run quality checks:
-
-```powershell
-python .\skills\visio-scientific-figures\scripts\check_quality.py .\examples\toy_flowchart\output\toy_flowchart.vsdx --png .\examples\toy_flowchart\output\toy_flowchart.png --emf .\examples\toy_flowchart\output\toy_flowchart.emf --report .\examples\toy_flowchart\output\quality_report.md
-```
-
-## Spec Example / 规格示例
+Minimum spec shape:
 
 ```json
 {
   "template": "flowchart",
-  "title": "Toy Research Workflow",
-  "canvas": { "width_in": 7.5, "height_in": 3.8 },
+  "title": "Figure title",
+  "canvas": { "width_in": 7.5, "height_in": 4.8 },
   "style": "chinese-journal",
-  "nodes": [
-    { "id": "question", "text": "Define research question" },
-    { "id": "data", "text": "Collect public data" }
-  ],
+  "nodes": [{ "id": "input", "text": "Input" }],
   "groups": [],
-  "connectors": [
-    { "from": "question", "to": "data" }
-  ],
-  "exports": { "dir": "output", "stem": "toy_flowchart" }
+  "connectors": [],
+  "exports": { "dir": "output", "stem": "figure" }
 }
 ```
 
-See [`spec-format.md`](skills/visio-scientific-figures/references/spec-format.md) and the bundled JSON Schema at [`figure_spec.schema.json`](skills/visio-scientific-figures/schema/figure_spec.schema.json).
+Details live in:
 
-## AI Image Assets / AI 图标资产
+- [`spec-format.md`](skills/visio-scientific-figures/references/spec-format.md)
+- [`figure_spec.schema.json`](skills/visio-scientific-figures/schema/figure_spec.schema.json)
+- [`quality-guidelines.md`](skills/visio-scientific-figures/references/quality-guidelines.md)
+- [`image-assets.md`](skills/visio-scientific-figures/references/image-assets.md)
 
-When Visio shapes cannot faithfully reproduce a user's source icons, generate clean low-AI-look assets with an image model, save them under an `assets/` folder, and reference them in the spec:
+## How It Works
 
-```json
-{
-  "id": "sensor",
-  "text": "Sensor data",
-  "image": "assets/sensor-data.png",
-  "image_mode": "left"
-}
-```
+1. Write or generate `figure_spec.yaml/json`.
+2. Run `validate_spec.py` before opening Visio.
+3. Render `.vsdx`, `.png`, and `.emf` with `render_spec.py`.
+4. Run `check_quality.py`.
+5. Fix the spec, not the screenshot, until the report is clean.
 
-Use editable Visio text for labels and generated image assets only for the visual icon or panel. See [`image-assets.md`](skills/visio-scientific-figures/references/image-assets.md).
+## Repository Layout
 
-## 中文使用建议
+- `skills/visio-scientific-figures/`: the actual skill package
+- `skills/visio-scientific-figures/scripts/`: render, validate, quality, environment, gallery
+- `skills/visio-scientific-figures/references/`: spec rules, recipes, quality guidance
+- `examples/`: open-source-safe sample specs and assets
+- `docs/gallery/`: tracked PNG previews for the README
 
-- 中文期刊图优先使用 `chinese-journal` 风格包。
-- 保留 `.vsdx` 作为可编辑源文件，投稿或插入 Word 时优先尝试 `.emf`。
-- 生成后必须查看 `quality_report.md`，再人工检查 PNG 预览。
-- 不要把真实论文正文、涉密项目图、原始 `.docx` 或未脱敏素材放进开源示例。
+## What Is Deliberately Not Here
+
+- No hidden manual touch-up step after render.
+- No bundling of real paper text, `.docx`, or undisguised project figures.
+- No claim of cross-platform `.vsdx` generation yet. The current renderer is still Windows + Visio COM.
+
+## Design Rules
+
+- Prefer restrained journal typography over presentation-style fonts.
+- Treat connector-over-text conflicts as defects, not acceptable noise.
+- Keep generated images for icons or panels only; keep labels editable in Visio.
+- Do not publish real manuscript text, source `.docx`, or undisguised project diagrams.
+
+## Roadmap
+
+- Add more research-native templates: neural architecture, attention mechanism, and data pipeline.
+- Add an XML-based `.vsdx` backend for CI and non-Windows environments.
+- Add incremental update mode for large figures instead of full document rebuilds.
+- Split `chinese-journal` into more journal-specific variants once real style constraints are stable.
+
+## Limits
+
+- Rendering currently depends on Windows + Microsoft Visio + `pywin32`.
+- CI-friendly XML backend generation is not implemented yet.
+- The templates cover common research figures, not every architecture or attention diagram.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development flow and verification expectations.
 
 ## License
 

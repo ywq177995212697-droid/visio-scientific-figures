@@ -4,6 +4,7 @@ import argparse
 import gc
 import json
 import math
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,10 @@ STYLE_PACKS = {
 
 def rgb(hex_color: str) -> str:
     value = hex_color.strip("#")
+    if len(value) == 3:
+        value = "".join(ch * 2 for ch in value)
+    if len(value) != 6:
+        raise SystemExit(f"Unsupported color value: {hex_color}. Use #RGB or #RRGGBB.")
     return f"RGB({int(value[0:2], 16)},{int(value[2:4], 16)},{int(value[4:6], 16)})"
 
 
@@ -87,11 +92,14 @@ def output_paths(spec: dict[str, Any], spec_dir: Path) -> dict[str, Path]:
     stem = str(exports.get("stem") or "output")
     out_dir = spec_dir / str(exports.get("dir") or "output")
     out_dir.mkdir(parents=True, exist_ok=True)
-    return {
+    paths = {
         "vsdx": (spec_dir / exports["vsdx"]) if "vsdx" in exports else out_dir / f"{stem}.vsdx",
         "png": (spec_dir / exports["png"]) if "png" in exports else out_dir / f"{stem}.png",
         "emf": (spec_dir / exports["emf"]) if "emf" in exports else out_dir / f"{stem}.emf",
     }
+    for path in paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return paths
 
 
 class VisioCanvas:
@@ -105,16 +113,30 @@ class VisioCanvas:
         self.page = app.ActivePage
         self.page.PageSheet.CellsU("PageWidth").FormulaU = f"{width} in"
         self.page.PageSheet.CellsU("PageHeight").FormulaU = f"{height} in"
+        self._font_cache: dict[str, int | None] = {}
         self.font_id = self._find_font(self.style.get("font_candidates"))
         self.shapes: dict[str, Any] = {}
 
     def _find_font(self, candidates: list[str] | None = None) -> int | None:
         preferred = candidates or ["Times New Roman", "Arial", "Microsoft YaHei", "SimSun"]
-        for name in preferred:
-            for idx in range(1, self.doc.Fonts.Count + 1):
-                font = self.doc.Fonts.Item(idx)
-                if name.lower() in font.Name.lower():
-                    return font.ID
+        cache_key = "|".join(name.lower() for name in preferred)
+        if cache_key in self._font_cache:
+            return self._font_cache[cache_key]
+        fonts = [(self.doc.Fonts.Item(idx).Name, self.doc.Fonts.Item(idx).ID) for idx in range(1, self.doc.Fonts.Count + 1)]
+        lowered = [(name.lower(), font_id) for name, font_id in fonts]
+        for preferred_name in preferred:
+            target = preferred_name.lower()
+            for actual_name, font_id in lowered:
+                if actual_name == target:
+                    self._font_cache[cache_key] = font_id
+                    return font_id
+        for preferred_name in preferred:
+            target = preferred_name.lower()
+            for actual_name, font_id in lowered:
+                if target in actual_name:
+                    self._font_cache[cache_key] = font_id
+                    return font_id
+        self._font_cache[cache_key] = None
         return None
 
     def font_id_for(self, family: str | None) -> int | None:
@@ -144,22 +166,23 @@ class VisioCanvas:
 
     def rect(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
              fill: str, line: str, font: str | None = None, radius: float = 0.06,
-             font_size: float = 9.0, bold: bool = False, font_family: str | None = None) -> Any:
+             font_size: float = 9.0, bold: bool = False, font_family: str | None = None,
+             line_w: float = 1.1) -> Any:
         shape = self.page.DrawRectangle(x, self.y(y + h), x + w, self.y(y))
         shape.Text = text
         shape.NameU = node_id
-        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold, font_family=font_family)
+        self.apply_style(shape, fill, line, font, line_w=line_w, font_size=font_size, bold=bold, font_family=font_family)
         shape.CellsU("Rounding").FormulaU = f"{radius} in"
         self.shapes[node_id] = shape
         return shape
 
     def ellipse(self, node_id: str, x: float, y: float, w: float, h: float, text: str,
                 fill: str, line: str, font: str | None = None, font_size: float = 9.0,
-                bold: bool = False, font_family: str | None = None) -> Any:
+                bold: bool = False, font_family: str | None = None, line_w: float = 1.1) -> Any:
         shape = self.page.DrawOval(x, self.y(y + h), x + w, self.y(y))
         shape.Text = text
         shape.NameU = node_id
-        self.apply_style(shape, fill, line, font, font_size=font_size, bold=bold, font_family=font_family)
+        self.apply_style(shape, fill, line, font, line_w=line_w, font_size=font_size, bold=bold, font_family=font_family)
         self.shapes[node_id] = shape
         return shape
 
@@ -264,6 +287,7 @@ class VisioCanvas:
                 return action()
             except Exception as exc:
                 last_error = exc
+                print(f"[warn] Visio COM retry {_attempt + 1}/3: {exc}", file=sys.stderr)
                 time.sleep(0.8)
         raise last_error
 
@@ -303,12 +327,13 @@ def draw_node(c: VisioCanvas, node: dict[str, Any], box: tuple[float, float, flo
     font_size = float(node.get("font_size", default_font_size))
     bold = bool(node.get("bold", default_bold))
     font_family = node.get("font_family")
+    line_width = float(node.get("line_width", 1.1))
     if image_path and shape_kind == "image":
         return c.image(node_id, *box, image_path, register=True)
     shape_func = c.ellipse if shape_kind == "ellipse" else c.rect
     container_text = "" if image_path else text
     shape = shape_func(node_id, *box, container_text, fill, line,
-                       font_size=font_size, bold=bold, font_family=font_family)
+                       font_size=font_size, bold=bold, font_family=font_family, line_w=line_width)
     if image_path:
         place_image_in_node(c, node, box, image_path, text, font_size, bold)
     return shape
@@ -457,7 +482,7 @@ def render(spec_path: Path) -> dict[str, Path]:
     paths = output_paths(spec, spec_path.parent)
     app = win32com.client.DispatchEx("Visio.Application")
     app.Visible = False
-    app.AlertResponse = 7
+    app.AlertResponse = 7  # Auto-accept the default button in non-interactive prompts.
     c = None
     try:
         c = VisioCanvas(app, width, height, style, spec_path.parent)

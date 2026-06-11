@@ -71,9 +71,16 @@ def visio_check() -> Check:
         app = win32com.client.DispatchEx("Visio.Application")
         app.Visible = False
         version = getattr(app, "Version", "unknown")
+        doc = app.Documents.Add("")
+        registered = {doc.Fonts.Item(idx).Name.lower() for idx in range(1, doc.Fonts.Count + 1)}
+        preferred = [name for name in FONT_CANDIDATES if name.lower() in registered]
+        doc.Close()
         app.Quit()
         pythoncom.CoUninitialize()
-        return Check("Visio COM", "PASS", f"Microsoft Visio {version}")
+        detail = f"Microsoft Visio {version}"
+        if preferred:
+            detail += f"; registered fonts: {', '.join(preferred)}"
+        return Check("Visio COM", "PASS", detail)
     except Exception as exc:
         try:
             pythoncom.CoUninitialize()  # type: ignore[name-defined]

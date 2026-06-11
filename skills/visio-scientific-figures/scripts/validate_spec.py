@@ -120,15 +120,17 @@ def validate_nodes(spec: dict[str, Any], spec_path: Path, findings: list[Finding
 
 
 def validate_node_geometry(node: dict[str, Any], node_id: str, findings: list[Finding]) -> None:
-    for key in ("x", "y", "w", "h", "font_size", "image_pad"):
+    for key in ("x", "y", "w", "h", "width", "height", "font_size", "image_pad", "line_width"):
         if key in node and not isinstance(node[key], (int, float)):
             findings.append(Finding("error", f"`{node_id}.{key}` must be numeric."))
-    for key in ("w", "h"):
+    for key in ("w", "h", "width", "height", "line_width"):
         if key in node and isinstance(node[key], (int, float)) and node[key] <= 0:
             findings.append(Finding("error", f"`{node_id}.{key}` must be positive."))
     shape = node.get("shape")
     if shape and shape not in {"rect", "ellipse", "image"}:
         findings.append(Finding("error", f"`{node_id}.shape` must be rect, ellipse, or image."))
+    if len(str(node.get("text", ""))) > 500:
+        findings.append(Finding("warn", f"`{node_id}.text` is unusually long; shorten figure labels before rendering."))
 
 
 def validate_node_image(node: dict[str, Any], node_id: str, spec_path: Path, findings: list[Finding]) -> None:
@@ -161,6 +163,8 @@ def validate_groups(spec: dict[str, Any], nodes: set[str], findings: list[Findin
         if group_id in seen:
             findings.append(Finding("error", f"duplicate group id: `{group_id}`."))
         seen.add(group_id)
+        if len(str(group.get("title", ""))) > 500:
+            findings.append(Finding("warn", f"`groups[{idx}].title` is unusually long; shorten band titles."))
         for key in ("x", "y", "w", "h", "title_x", "title_y", "title_w"):
             if key in group and not isinstance(group[key], (int, float)):
                 findings.append(Finding("error", f"`groups[{idx}].{key}` must be numeric."))
@@ -201,6 +205,8 @@ def validate_exports(spec: dict[str, Any], findings: list[Finding]) -> None:
 def validate_matrix(spec: dict[str, Any], findings: list[Finding]) -> None:
     if spec.get("template") != "matrix":
         return
+    if spec.get("nodes"):
+        findings.append(Finding("warn", "`matrix` templates ignore `nodes`; keep it empty unless you are extending the renderer."))
     matrix = spec.get("matrix")
     if not isinstance(matrix, dict):
         findings.append(Finding("error", "`matrix` template requires a `matrix` object."))

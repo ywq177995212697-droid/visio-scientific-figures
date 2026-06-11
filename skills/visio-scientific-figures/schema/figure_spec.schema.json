@@ -13,7 +13,7 @@
     "connectors",
     "exports"
   ],
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "template": {
       "type": "string",
@@ -67,6 +67,36 @@
                 "chinese-journal",
                 "presentation-color"
               ]
+            },
+            "font_candidates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "fills": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "strokes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ink": {
+              "type": "string"
+            },
+            "muted": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "bg": {
+              "type": "string"
             }
           },
           "additionalProperties": true
@@ -122,7 +152,7 @@
       "required": [
         "id"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
@@ -145,6 +175,14 @@
           "type": "number",
           "exclusiveMinimum": 0
         },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
         "shape": {
           "type": "string",
           "enum": [
@@ -152,6 +190,19 @@
             "ellipse",
             "image"
           ]
+        },
+        "fill": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        },
+        "font": {
+          "type": "string"
+        },
+        "font_size": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
         "image": {
           "type": "string"
@@ -168,8 +219,15 @@
           "type": "number",
           "minimum": 0
         },
+        "line_width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
         "font_family": {
           "type": "string"
+        },
+        "bold": {
+          "type": "boolean"
         }
       }
     },
@@ -179,7 +237,7 @@
         "id",
         "nodes"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
@@ -226,7 +284,7 @@
         "from",
         "to"
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "from": {
           "type": "string"

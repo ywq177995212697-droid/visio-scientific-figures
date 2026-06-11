@@ -97,7 +97,8 @@ def parse_shapes(root: ET.Element, page_h: float) -> list[ShapeInfo]:
         pin_x, pin_y = number(cell(shape, "PinX")), number(cell(shape, "PinY"))
         text = text_content(shape)
         has_connector_cells = any(cell(shape, n) for n in ("BeginX", "EndX"))
-        is_line = w < 0.08 or h < 0.08 or has_connector_cells
+        thin_without_text = not text and min(w, h) < 0.08 and max(w, h) > 0.18
+        is_line = has_connector_cells or thin_without_text
         begin_x = number(cell(shape, "BeginX"), pin_x - w / 2)
         begin_y = page_h - number(cell(shape, "BeginY"), pin_y)
         end_x = number(cell(shape, "EndX"), pin_x + w / 2)
@@ -241,7 +242,8 @@ def inspect_connectors(shapes: list[ShapeInfo], content: list[ShapeInfo]) -> lis
                 continue
             if endpoint_near_shape(line.end_x, line.end_y, [shape], tolerance=0.04):
                 continue
-            if segment_hits_rect(line.begin_x, line.begin_y, line.end_x, line.end_y, shape, pad=0.03):
+            cross_pad = 0.0 if line.name.startswith("route_segment_") else 0.03
+            if segment_hits_rect(line.begin_x, line.begin_y, line.end_x, line.end_y, shape, pad=cross_pad):
                 issues.append(Issue("warn", f"connector crosses text or title: {label(line)} over {label(shape)}"))
     return issues
 
