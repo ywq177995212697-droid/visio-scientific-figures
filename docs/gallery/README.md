@@ -1,22 +1,6 @@
 # Gallery
 
-Generated preview images for open-source-safe examples.
-
-## Toy Flowchart
-
-![Toy Flowchart](toy_flowchart.png)
-
-## Toy Framework
-
-![Toy Framework](toy_framework.png)
-
-## Toy Layered System
-
-![Toy Layered System](toy_layered_system.png)
-
-## Toy Image Assets
-
-![Toy Image Assets](toy_image_assets.png)
+Generated preview image for the main open-source-safe showcase.
 
 ## Research Framework With Assets
 

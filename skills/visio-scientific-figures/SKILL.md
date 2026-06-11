@@ -10,27 +10,29 @@ allowed-tools: Bash, Read, Write, Edit
 
 1. Clarify the figure intent from the user's paper text, sketch, or existing `.vsdx`.
 2. Choose a template: `flowchart`, `framework`, `layered-system`, `matrix`, or `mechanism`.
-3. If the source figure needs realistic icons or pictorial elements, generate/import image assets first and reference them from nodes with `image`.
-4. Write a `figure_spec.yaml` or `figure_spec.json` with `template`, `title`, `canvas`, `style`, `nodes`, `groups`, `connectors`, and `exports`.
-5. From the skill directory, validate the spec before launching Visio:
+3. If the source figure needs realistic icons or pictorial elements, default to calling Image 2 first for a clean first-pass asset.
+4. If the user already has a useful reference figure or screenshot, crop reusable bitmap fragments from it and import them as supporting assets when they preserve a useful visual cue.
+5. Write a `figure_spec.yaml` or `figure_spec.json` with `template`, `title`, `canvas`, `style`, `nodes`, `groups`, `connectors`, and `exports`.
+6. Keep labels, titles, and connectors editable in Visio even when the nodes contain generated or screenshot-cropped bitmaps.
+7. From the skill directory, validate the spec before launching Visio:
 
 ```bash
 python scripts/validate_spec.py path/to/figure_spec.yaml
 ```
 
-6. From the same skill directory, render with:
+8. From the same skill directory, render with:
 
 ```bash
 python scripts/render_spec.py path/to/figure_spec.yaml
 ```
 
-7. Run the quality checker:
+9. Run the quality checker:
 
 ```bash
 python scripts/check_quality.py path/to/output.vsdx --png path/to/output.png --emf path/to/output.emf --report path/to/quality_report.md
 ```
 
-8. Read `quality_report.md`, fix the spec or script, and re-render until the report has no errors and only acceptable warnings.
+10. Read `quality_report.md`, fix the spec or script, and re-render until the report has no errors and only acceptable warnings.
 
 ## Template Selection
 
@@ -40,7 +42,7 @@ python scripts/check_quality.py path/to/output.vsdx --png path/to/output.png --e
 - Use `matrix` for comparison tables, capability-task maps, method-feature maps, and evaluation grids.
 - Use `mechanism` for causal relations, feedback loops, interactions, and circular process figures.
 
-Read `references/spec-format.md` before writing a new spec. Read `references/image-assets.md` when a figure needs icons, equipment illustrations, screenshots, or AI-generated bitmap assets. Read `references/recipes.md` for paper-paragraph-to-spec and quality-loop patterns. Read `references/visio-com-notes.md` before patching scripts or editing existing `.vsdx` files. Read `references/quality-guidelines.md` when a figure is meant for a paper submission.
+Read `references/spec-format.md` before writing a new spec. Read `references/image-assets.md` when a figure needs icons, equipment illustrations, screenshots, or AI-generated bitmap assets. Read `references/recipes.md` for paper-paragraph-to-spec, screenshot-crop, and quality-loop patterns. Read `references/visio-com-notes.md` before patching scripts or editing existing `.vsdx` files. Read `references/quality-guidelines.md` when a figure is meant for a paper submission.
 
 ## Figure Spec Rules
 
@@ -48,6 +50,7 @@ Read `references/spec-format.md` before writing a new spec. Read `references/ima
 - Use `canvas.width_in` and `canvas.height_in` in inches. Paper figures usually work best between 4-8 inches wide for single-column and 7-12 inches wide for double-column figures.
 - Put stable IDs on all nodes. Connectors refer to `from` and `to` IDs.
 - Use node `image` paths for generated icons or figure panels; keep labels as editable Visio text whenever possible.
+- Default to Image 2 first for icon drafts, then fall back to screenshot-cropped reference fragments when that preserves the source look better.
 - Run `scripts/validate_spec.py` before rendering when a spec is hand-written or derived from a paper paragraph.
 - Prefer short node text. Use line breaks only when they improve readability.
 - Avoid presentation-style typography. Use restrained journal fonts, usually Times New Roman or Arial for English figures and SimSun or Microsoft YaHei for Chinese figures. Use bold sparingly.

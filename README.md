@@ -13,9 +13,9 @@ Editable Microsoft Visio scientific figures from structured specs.
 ```powershell
 python -m pip install -r requirements.txt
 python .\skills\visio-scientific-figures\scripts\check_environment.py
-python .\skills\visio-scientific-figures\scripts\validate_spec.py .\examples\toy_flowchart\figure_spec.yaml
-python .\skills\visio-scientific-figures\scripts\render_spec.py .\examples\toy_flowchart\figure_spec.yaml
-python .\skills\visio-scientific-figures\scripts\check_quality.py .\examples\toy_flowchart\output\toy_flowchart.vsdx --png .\examples\toy_flowchart\output\toy_flowchart.png --emf .\examples\toy_flowchart\output\toy_flowchart.emf --report .\examples\toy_flowchart\output\quality_report.md
+python .\skills\visio-scientific-figures\scripts\validate_spec.py .\examples\research_framework_with_assets\figure_spec.yaml
+python .\skills\visio-scientific-figures\scripts\render_spec.py .\examples\research_framework_with_assets\figure_spec.yaml
+python .\skills\visio-scientific-figures\scripts\check_quality.py .\examples\research_framework_with_assets\output\research_framework_with_assets.vsdx --png .\examples\research_framework_with_assets\output\research_framework_with_assets.png --emf .\examples\research_framework_with_assets\output\research_framework_with_assets.emf --report .\examples\research_framework_with_assets\output\quality_report.md
 ```
 
 Install into local agents:
@@ -29,43 +29,43 @@ Install into local agents:
 
 - Keeps `.vsdx` as the source of truth instead of a flat screenshot.
 - Generates common research diagram types from a reproducible `figure_spec.yaml/json`.
-- Imports AI-generated or hand-drawn icons when Visio primitives are not enough.
+- Defaults to Image 2 first-pass asset generation when Visio primitives are not enough.
+- Reuses screenshot-cropped visual fragments from the reference figure when they preserve useful visual cues.
 - Checks for bounds errors, overlaps, text overflow, connector issues, and weak typography before you ship the figure.
 
-## Featured Example
+## Default Workflow
 
-This repo includes an anonymized real-paper reconstruction instead of only toy boxes and arrows.
+This skill is not meant to be a boxes-and-arrows toy. The default workflow is:
+
+1. Ask Image 2 for a first-pass icon or small illustration when the figure needs realistic visual elements.
+2. Crop usable bitmap fragments from the reference figure or screenshot when the original visual cue is worth preserving.
+3. Import those assets into Visio nodes, but keep labels, titles, and connectors editable in Visio.
+4. Run the quality checker and iterate until the editable figure is clean.
+
+## Complex Example
+
+This repo is intentionally centered on one complex showcase: an anonymized reconstruction derived from a blurred real-paper figure.
 
 ![Anonymized real-paper reconstruction](docs/gallery/research_framework_with_assets.png)
 
-The example keeps the complexity of a journal-style framework figure while blurring the source reference and replacing private terms with neutral labels.
+The showcase demonstrates the exact repository thesis:
 
-## Gallery
-
-| Flowchart | Framework |
-| --- | --- |
-| ![Toy flowchart](docs/gallery/toy_flowchart.png) | ![Toy framework](docs/gallery/toy_framework.png) |
-
-| Layered system | Image assets |
-| --- | --- |
-| ![Toy layered system](docs/gallery/toy_layered_system.png) | ![Toy image assets](docs/gallery/toy_image_assets.png) |
-
-Refresh the gallery after rendering examples:
-
-```powershell
-python .\skills\visio-scientific-figures\scripts\make_gallery.py
-```
+- start from a blurred source figure instead of publishing private manuscript material
+- generate or redraw missing icons with Image 2 first
+- crop useful reference fragments when screenshots communicate the structure better
+- rebuild the final figure as editable Visio shapes, text, and connectors
+- export `.vsdx`, `.png`, and `.emf`, then run automated layout checks
 
 ## At a Glance
 
 | Surface | Current state |
 | --- | --- |
-| Input | `figure_spec.yaml/json`, paper paragraph, sketch, or existing figure |
+| Input | `figure_spec.yaml/json`, paper paragraph, sketch, blurred source figure, or screenshot |
 | Output | Editable `.vsdx` plus `.png` and `.emf` |
 | Templates | `flowchart`, `framework`, `layered-system`, `matrix`, `mechanism` |
 | QA | Bounds, overlaps, text overflow, contrast, detached arrows, connector-over-text |
-| Asset path | Native Visio shapes plus imported bitmap icons/images |
-| Best fit | Paper figures, thesis diagrams, system frameworks, workflow figures |
+| Asset path | Image 2 first-pass assets, screenshot crops, plus native Visio shapes |
+| Best fit | Paper figures, thesis diagrams, system frameworks, workflow figures with pictorial assets |
 
 ## Core Surface
 
@@ -108,19 +108,21 @@ Details live in:
 
 ## How It Works
 
-1. Write or generate `figure_spec.yaml/json`.
-2. Run `validate_spec.py` before opening Visio.
-3. Render `.vsdx`, `.png`, and `.emf` with `render_spec.py`.
-4. Run `check_quality.py`.
-5. Fix the spec, not the screenshot, until the report is clean.
+1. Start from a paper paragraph, sketch, or blurred source figure.
+2. Call Image 2 first for icons or small figure panels when native Visio shapes will look weak.
+3. Crop screenshot fragments from the reference figure when they preserve a useful visual cue.
+4. Write or generate `figure_spec.yaml/json` with those assets referenced in `nodes[].image`.
+5. Run `validate_spec.py`, then render `.vsdx`, `.png`, and `.emf`.
+6. Run `check_quality.py`.
+7. Fix the spec, not the screenshot, until the report is clean.
 
 ## Repository Layout
 
 - `skills/visio-scientific-figures/`: the actual skill package
 - `skills/visio-scientific-figures/scripts/`: render, validate, quality, environment, gallery
 - `skills/visio-scientific-figures/references/`: spec rules, recipes, quality guidance
-- `examples/`: open-source-safe sample specs and assets
-- `docs/gallery/`: tracked PNG previews for the README
+- `examples/`: open-source-safe sample specs and assets, with the main showcase under `research_framework_with_assets/`
+- `docs/gallery/`: tracked PNG previews for the README hero example
 
 ## What Is Deliberately Not Here
 
@@ -132,7 +134,7 @@ Details live in:
 
 - Prefer restrained journal typography over presentation-style fonts.
 - Treat connector-over-text conflicts as defects, not acceptable noise.
-- Keep generated images for icons or panels only; keep labels editable in Visio.
+- Use Image 2 or screenshot crops for icons and visual panels; keep labels editable in Visio.
 - Do not publish real manuscript text, source `.docx`, or undisguised project diagrams.
 
 ## Roadmap

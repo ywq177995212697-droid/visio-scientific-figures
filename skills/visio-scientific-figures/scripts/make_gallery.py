@@ -6,10 +6,6 @@ from pathlib import Path
 
 
 DEFAULT_CASES = [
-    "toy_flowchart",
-    "toy_framework",
-    "toy_layered_system",
-    "toy_image_assets",
     "research_framework_with_assets",
 ]
 
@@ -31,7 +27,7 @@ def write_index(docs_dir: Path, copied: list[Path]) -> None:
     lines = [
         "# Gallery",
         "",
-        "Generated preview images for open-source-safe examples.",
+        "Generated preview image for the main open-source-safe showcase.",
         "",
     ]
     if not copied:
