@@ -44,17 +44,16 @@ This skill is not meant to be a boxes-and-arrows toy. The default workflow is:
 
 ## Complex Example
 
-This repo is intentionally centered on one complex showcase: an anonymized reconstruction derived from a blurred real-paper figure.
+This repo is intentionally centered on one complex showcase: a single enlarged blurred source figure from a real-paper workflow.
 
 ![Anonymized real-paper reconstruction](docs/gallery/research_framework_with_assets.png)
 
 The showcase demonstrates the exact repository thesis:
 
-- start from a blurred source figure instead of publishing private manuscript material
-- generate or redraw missing icons with Image 2 first
-- crop useful reference fragments when screenshots communicate the structure better
-- rebuild the final figure as editable Visio shapes, text, and connectors
-- export `.vsdx`, `.png`, and `.emf`, then run automated layout checks
+- keep the public example focused on the anonymized source image itself
+- enlarge the blurred figure so the overall structure is still readable
+- use this image as the visual starting point before any Visio reconstruction work
+- avoid publishing private manuscript text or undisguised figure assets
 
 ## At a Glance
 
