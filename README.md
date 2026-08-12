@@ -1,3 +1,5 @@
+
+
 # Visio Scientific Figures
 
 Editable Microsoft Visio scientific figures from structured specs.
@@ -104,6 +106,7 @@ Details live in:
 - [`figure_spec.schema.json`](skills/visio-scientific-figures/schema/figure_spec.schema.json)
 - [`quality-guidelines.md`](skills/visio-scientific-figures/references/quality-guidelines.md)
 - [`image-assets.md`](skills/visio-scientific-figures/references/image-assets.md)
+- [`recipes.md`](skills/visio-scientific-figures/references/recipes.md)
 
 ## How It Works
 
